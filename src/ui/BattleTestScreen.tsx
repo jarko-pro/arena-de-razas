@@ -1,0 +1,191 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  buildBattleTimeline,
+  collectBattleUnits,
+  resetArena,
+  type ArenaDom,
+  type BattleTimeline,
+} from '../anim/battleTimeline'
+import { measureArena, type Geometry } from '../anim/geometry'
+import {
+  simulateBattle,
+  type Outcome,
+  type TeamUnit,
+  type Uid,
+  type UnitSnapshot,
+} from '../engine/combat'
+import { UNITS, abilityText } from '../engine/units'
+import { UnitCard } from './UnitCard'
+import './arena.css'
+
+/** Equipos fijos de la pantalla de prueba, elegidos para ver muchos disparadores. */
+const PLAYER_TEAM: readonly TeamUnit[] = [
+  { defId: 'knight' },
+  { defId: 'berserker' },
+  { defId: 'archer' },
+  { defId: 'shaman' },
+  { defId: 'cleric' },
+]
+
+const RIVAL_TEAM: readonly TeamUnit[] = [
+  { defId: 'saurian' },
+  { defId: 'basilisk' },
+  { defId: 'skeleton' },
+  { defId: 'spitter' },
+  { defId: 'necromancer' },
+]
+
+const SEED = 2026
+
+const BANNER: Record<Outcome, string> = {
+  victoryA: '¡Victoria!',
+  victoryB: 'Derrota',
+  draw: 'Empate',
+}
+
+function describe(unit: UnitSnapshot): string {
+  const def = UNITS[unit.defId]
+  const text = abilityText(def, unit.level)
+  return text === '' ? def.name : `${def.name} · ${text}`
+}
+
+interface BattleTestScreenProps {
+  readonly onBack: () => void
+}
+
+export function BattleTestScreen({ onBack }: BattleTestScreenProps) {
+  const result = useMemo(() => simulateBattle(PLAYER_TEAM, RIVAL_TEAM, SEED), [])
+  const units = useMemo(() => collectBattleUnits(result), [result])
+
+  const arenaRef = useRef<HTMLDivElement>(null)
+  const fxRef = useRef<HTMLDivElement>(null)
+  const elsRef = useRef(new Map<Uid, HTMLDivElement>())
+  const timelineRef = useRef<BattleTimeline | null>(null)
+  const playingRef = useRef(false)
+
+  const [geo, setGeo] = useState<Geometry | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const [outcome, setOutcome] = useState<Outcome | null>(null)
+
+  const getDom = useCallback((): ArenaDom | null => {
+    const arena = arenaRef.current
+    const fxLayer = fxRef.current
+    if (!arena || !fxLayer) return null
+    return { arena, fxLayer, unitEl: (uid) => elsRef.current.get(uid) }
+  }, [])
+
+  // Mide la arena al montar y cuando cambia de ancho.
+  useEffect(() => {
+    const element = arenaRef.current
+    if (!element) return
+    const update = (): void => {
+      const width = element.clientWidth
+      setGeo((previous) =>
+        previous && previous.width === width ? previous : measureArena(width),
+      )
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  // Coloca las fichas en su sitio al medir, salvo si hay un combate en marcha.
+  useEffect(() => {
+    const dom = getDom()
+    if (!geo || !dom || playingRef.current) return
+    resetArena(dom, result, geo)
+  }, [geo, result, getDom])
+
+  useEffect(
+    () => () => {
+      timelineRef.current?.kill()
+    },
+    [],
+  )
+
+  const play = useCallback(() => {
+    const dom = getDom()
+    if (!geo || !dom) return
+    timelineRef.current?.kill()
+    resetArena(dom, result, geo)
+    setOutcome(null)
+    setPlaying(true)
+    playingRef.current = true
+    const timeline = buildBattleTimeline(dom, result, geo, setOutcome)
+    timeline.eventCallback('onComplete', () => {
+      setPlaying(false)
+      playingRef.current = false
+    })
+    timelineRef.current = timeline
+    timeline.play(0)
+  }, [geo, result, getDom])
+
+  return (
+    <div className="pantalla-combate">
+      <div className="cabecera-combate">
+        <h1>Arena de Razas</h1>
+        <p>
+          Prueba del motor: el combate se simula entero y la pantalla solo reproduce sus{' '}
+          {result.events.length} eventos.
+        </p>
+      </div>
+
+      <div className="controles">
+        <button type="button" className="btn primary" onClick={play} disabled={playing}>
+          {outcome === null ? 'Combatir' : 'Repetir'}
+        </button>
+        <button type="button" className="btn" onClick={onBack} disabled={playing}>
+          Volver
+        </button>
+        <span className="semilla">
+          Semilla {SEED} · {result.rounds} rondas
+        </span>
+      </div>
+
+      <div className="bandos">
+        <span className="izq">Tu equipo</span>
+        <span className="der">Rival</span>
+      </div>
+
+      <div className="arena" ref={arenaRef} style={{ height: geo?.height }}>
+        {units.map((unit) => (
+          <UnitCard
+            key={unit.uid}
+            unit={unit}
+            description={describe(unit)}
+            registerEl={(el) => {
+              if (el) elsRef.current.set(unit.uid, el)
+              else elsRef.current.delete(unit.uid)
+            }}
+          />
+        ))}
+        <div className="capa-fx" ref={fxRef} />
+        {outcome !== null && <div className="banner">{BANNER[outcome]}</div>}
+      </div>
+
+      <div className="listas">
+        {(['A', 'B'] as const).map((side) => (
+          <div className="lista" key={side}>
+            <h2>{side === 'A' ? 'Tu equipo (de delante a atrás)' : 'Rival (de delante a atrás)'}</h2>
+            <ol>
+              {result.teams[side].map((unit) => (
+                <li key={unit.uid}>
+                  <b>{unit.name}</b> · {unit.atk} ATK / {unit.hp} PV
+                  {abilityText(UNITS[unit.defId], unit.level) !== '' && (
+                    <span>{abilityText(UNITS[unit.defId], unit.level)}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
+      </div>
+
+      <p className="nota">
+        Todo el movimiento son tweens de GSAP sobre fichas estáticas: avanzar, chocar, temblar,
+        números flotantes, proyectiles y desvanecerse.
+      </p>
+    </div>
+  )
+}

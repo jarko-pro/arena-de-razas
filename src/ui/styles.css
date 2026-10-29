@@ -1,15 +1,27 @@
+/* Paleta y tipografías de docs/demo.html: arena de arena al atardecer. */
+
 :root {
-  --fondo: #14110f;
-  --fondo-alto: #221d19;
-  --texto: #f0e6d8;
-  --texto-suave: #a79886;
-  --acento: #c0462f;
-  --acento-alto: #e05a40;
+  --bg: #1e1712;
+  --panel: #2a2019;
+  --line: #46372b;
+  --sand1: #c9a46c;
+  --sand2: #a88352;
+  --fg: #f1e6d4;
+  --muted: #b5a48d;
+  --accent: #f0b545;
+
+  --orc: #a5472c;
+  --human: #3e66a6;
+  --lizard: #3b8a58;
+  --undead: #6f5b93;
+
+  --hit: #ff5a45;
+  --buff: #7fd36b;
+
+  --display: 'Lilita One', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --body: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   color-scheme: dark;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  color: var(--texto);
-  background-color: var(--fondo);
 }
 
 * {
@@ -19,13 +31,18 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at 50% 0%, var(--fondo-alto), var(--fondo) 70%);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 15px;
 }
 
 #root {
   min-height: 100vh;
   display: flex;
 }
+
+/* ------------------------------------------------------- Pantalla inicio --- */
 
 .pantalla-inicio {
   flex: 1;
@@ -36,50 +53,55 @@ body {
   gap: 1.5rem;
   padding: 2rem 1rem;
   text-align: center;
+  background: radial-gradient(120% 70% at 50% 0%, #2a2019, var(--bg) 70%);
 }
 
 .titulo {
   margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
   font-size: clamp(2.5rem, 12vw, 4.5rem);
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   line-height: 1.05;
-  text-shadow: 0 2px 0 #000, 0 0 2rem rgba(192, 70, 47, 0.35);
+  color: var(--accent);
+  text-shadow: 0 3px 0 rgb(0 0 0 / 45%);
 }
 
 .subtitulo {
   margin: 0;
-  max-width: 24rem;
-  color: var(--texto-suave);
+  max-width: 26rem;
+  color: var(--muted);
   font-size: 1rem;
 }
 
 .boton-principal {
   min-width: 11rem;
   padding: 0.9rem 2.5rem;
-  border: none;
-  border-radius: 0.5rem;
-  background: var(--acento);
-  color: var(--texto);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: #2a1a07;
   font: inherit;
   font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   cursor: pointer;
-  box-shadow: 0 0.25rem 0 #7d2a1a;
-  transition: background-color 120ms ease, transform 120ms ease;
+  box-shadow: 0 0.25rem 0 #8a6318;
+  transition:
+    background-color 120ms ease,
+    transform 120ms ease;
 }
 
 .boton-principal:hover {
-  background: var(--acento-alto);
+  background: #ffc75e;
 }
 
 .boton-principal:active {
   transform: translateY(0.2rem);
-  box-shadow: 0 0.05rem 0 #7d2a1a;
+  box-shadow: 0 0.05rem 0 #8a6318;
 }
 
 .boton-principal:focus-visible {
-  outline: 2px solid var(--texto);
+  outline: 2px solid var(--fg);
   outline-offset: 3px;
 }

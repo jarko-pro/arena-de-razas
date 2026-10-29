@@ -1,0 +1,234 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Arena de Razas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito+Sans:wght@400;600;800&display=swap">
+<style>
+/* Arena de arena al atardecer: dos filas enfrentadas, la primera unidad de cada equipo junto al centro */
+:root{
+  --bg:#1e1712; --panel:#2a2019; --line:#46372b;
+  --sand1:#c9a46c; --sand2:#a88352;
+  --fg:#f1e6d4; --muted:#b5a48d; --accent:#f0b545;
+  --orco:#a5472c; --humano:#3e66a6; --lagarto:#3b8a58; --nomuerto:#6f5b93;
+  --hit:#ff5a45; --buff:#7fd36b;
+  --display:"Lilita One","Arial Rounded MT Bold",system-ui,sans-serif;
+  --body:"Nunito Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --t:350ms;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px}
+.wrap{max-width:960px;margin:0 auto;padding-block:16px 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(26px,5vw,40px);margin:0;color:var(--accent);letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted)}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--panel);padding:9px 16px;border-radius:999px;font-weight:800}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#2a1a07}
+.btn:disabled{opacity:.45;cursor:default}
+.teams{display:flex;justify-content:space-between;font-family:var(--display);font-size:18px}
+.teams .r{color:var(--hit)} .teams .l{color:#8fb6ff}
+.arena{position:relative;width:100%;border-radius:18px;background:radial-gradient(120% 90% at 50% 40%,var(--sand1),var(--sand2));box-shadow:inset 0 -12px 30px rgba(0,0,0,.25);overflow:hidden}
+.arena::after{content:"";position:absolute;left:50%;top:12%;bottom:12%;width:2px;background:rgba(60,35,10,.25)}
+.u{position:absolute;left:0;top:0;transition:transform var(--t) ease,opacity var(--t) ease;will-change:transform}
+.body{position:relative;width:100%;aspect-ratio:1;border-radius:28%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--display);box-shadow:0 6px 0 rgba(0,0,0,.25),inset 0 -6px 0 rgba(0,0,0,.18);border:3px solid rgba(255,255,255,.35)}
+.r-orco{background:var(--orco)} .r-humano{background:var(--humano)} .r-lagarto{background:var(--lagarto)} .r-nomuerto{background:var(--nomuerto)}
+.mono{font-size:clamp(12px,2.6vw,24px);text-shadow:0 2px 0 rgba(0,0,0,.3)}
+.st{position:absolute;bottom:-10px;min-width:44%;height:clamp(16px,2.4vw,24px);border-radius:8px;font-family:var(--display);font-size:clamp(10px,1.8vw,15px);display:flex;align-items:center;justify-content:center;color:#2a1a07;border:2px solid rgba(0,0,0,.25);font-variant-numeric:tabular-nums}
+.st.atk{left:-6%;background:#ffd36b}
+.st.hp{right:-6%;background:#ff8f7a}
+.nm{display:block;text-align:center;margin-top:14px;font-size:clamp(9px,1.4vw,12px);font-weight:800;color:#3a240f;line-height:1.1}
+.float{position:absolute;pointer-events:none;font-family:var(--display);font-size:clamp(16px,3vw,26px);text-shadow:0 2px 0 rgba(0,0,0,.45);z-index:5;white-space:nowrap}
+.tag{position:absolute;pointer-events:none;font-weight:800;font-size:12px;background:rgba(30,20,10,.85);color:var(--fg);padding:2px 8px;border-radius:999px;z-index:6;white-space:nowrap}
+.shot{position:absolute;width:12px;height:12px;border-radius:50%;background:#fff6c9;box-shadow:0 0 10px 4px rgba(255,220,120,.8);z-index:7;pointer-events:none}
+.banner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:clamp(28px,7vw,60px);color:#fff;text-shadow:0 4px 0 rgba(0,0,0,.35);background:rgba(30,18,8,.35);z-index:10}
+.roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
+.col h2{font-family:var(--display);font-weight:400;font-size:18px;margin:0 0 8px}
+.col ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.col li{line-height:1.35}
+.col li b{font-variant-numeric:tabular-nums}
+.col li span{color:var(--muted);font-size:13px;display:block}
+.note{font-size:13px;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:reduce){:root{--t:0ms}}
+</style>
+
+<div class="wrap">
+  <div>
+    <h1>Arena de Razas</h1>
+    <p class="sub">Demo de combate automático: las unidades de delante chocan a la vez hasta que un equipo se queda sin nadie.</p>
+  </div>
+  <div class="ctrl">
+    <button class="btn primary" id="fight">Combatir</button>
+    <button class="btn" id="again">Repetir combate</button>
+    <button class="btn" id="shuffle">Nuevos equipos</button>
+    <button class="btn" id="speed">Velocidad x1</button>
+  </div>
+  <div class="teams"><span class="l">Tu equipo</span><span class="r">Rival</span></div>
+  <div class="arena" id="arena"></div>
+  <div class="roster" id="roster"></div>
+  <p class="note">Todo el movimiento son tweens sobre fichas estáticas: avanzar, chocar, temblar, números flotantes, proyectiles y desvanecerse.</p>
+</div>
+
+<script>
+const UNITS={
+  grunt:{name:'Grunt',race:'orco',atk:3,hp:3,text:''},
+  berserker:{name:'Berserker',race:'orco',atk:3,hp:4,on:'hurt',fx:'rage',n:2,text:'Al recibir daño y sobrevivir: +2 ATK.'},
+  chaman:{name:'Chamán',race:'orco',atk:2,hp:2,on:'faint',fx:'buffBehind',n:2,text:'Al morir: da +2/+2 al aliado de detrás.'},
+  recluta:{name:'Recluta',race:'humano',atk:2,hp:3,text:''},
+  arquero:{name:'Arquero',race:'humano',atk:2,hp:2,on:'start',fx:'snipe',n:3,text:'Inicio del combate: 3 de daño a un enemigo al azar.'},
+  caballero:{name:'Caballero',race:'humano',atk:3,hp:6,text:''},
+  clerigo:{name:'Clérigo',race:'humano',atk:1,hp:3,on:'start',fx:'shieldFront',n:3,text:'Inicio del combate: +3 PV al aliado de delante.'},
+  escupidor:{name:'Escupidor',race:'lagarto',atk:2,hp:2,on:'start',fx:'aoe',n:1,text:'Inicio del combate: 1 de daño a todos los enemigos.'},
+  basilisco:{name:'Basilisco',race:'lagarto',atk:3,hp:4,on:'hit',fx:'weaken',n:1,text:'Al golpear: su rival pierde 1 ATK.'},
+  saurio:{name:'Saurio',race:'lagarto',atk:5,hp:4,text:''},
+  esqueleto:{name:'Esqueleto',race:'nomuerto',atk:2,hp:2,on:'faint',fx:'summon',text:'Al morir: invoca unos Huesos 1/1.'},
+  nigromante:{name:'Nigromante',race:'nomuerto',atk:2,hp:3,on:'allyFaint',fx:'grow',n:1,text:'Cuando muere un aliado: +1/+1.'},
+  zombi:{name:'Zombi',race:'nomuerto',atk:1,hp:7,text:''},
+  huesos:{name:'Huesos',race:'nomuerto',atk:1,hp:1,text:'',token:true}
+};
+const POOL=Object.keys(UNITS).filter(k=>!UNITS[k].token);
+const arena=document.getElementById('arena');
+let UID=0,speed=1,running=false,teamsDef=null,T=null,els={},geo=null;
+
+const pick=()=>POOL[Math.floor(Math.random()*POOL.length)];
+const randTeam=()=>Array.from({length:5},pick);
+const mk=(id,side)=>({...UNITS[id],id,uid:++UID,side,maxHp:UNITS[id].hp});
+const wait=ms=>new Promise(r=>setTimeout(r,ms/speed));
+const anim=(el,kf,ms,easing='ease-out')=>el.animate(kf,{duration:ms/speed,easing}).finished.catch(()=>{});
+const team=u=>u.side==='L'?T.L:T.R;
+const foes=u=>u.side==='L'?T.R:T.L;
+const mono=n=>n.slice(0,2);
+
+function measure(){
+  const W=arena.clientWidth,slot=W/11,s=slot*.82;
+  arena.style.height=(s*1.9+40)+'px';
+  geo={W,slot,s,y:(s*1.9+40)/2-s*.62};
+}
+function cx(u){const i=team(u).indexOf(u);return u.side==='L'?geo.W/2-geo.slot*.5-geo.slot*(i+.5):geo.W/2+geo.slot*.5+geo.slot*(i+.5)}
+function place(u){const el=els[u.uid];if(!el)return;el.style.transform=`translate(${cx(u)-geo.s/2}px,${geo.y}px)`}
+function layout(){[...T.L,...T.R].forEach(place)}
+
+function makeEl(u){
+  const el=document.createElement('div');el.className='u';el.style.width=geo.s+'px';
+  el.innerHTML=`<div class="body r-${u.race}" title="${u.name}${u.text?' · '+u.text:''}"><span class="mono">${mono(u.name)}</span><span class="st atk">${u.atk}</span><span class="st hp">${u.hp}</span></div><span class="nm">${u.name}</span>`;
+  arena.appendChild(el);els[u.uid]=el;return el;
+}
+function refresh(u){const el=els[u.uid];if(!el)return;el.querySelector('.atk').textContent=u.atk;el.querySelector('.hp').textContent=Math.max(0,u.hp)}
+function pop(u,which){const el=els[u.uid];if(!el)return;anim(el.querySelector('.'+which),[{transform:'scale(1)'},{transform:'scale(1.6)'},{transform:'scale(1)'}],320)}
+function float(u,text,color){
+  const f=document.createElement('div');f.className='float';f.textContent=text;f.style.color=color;
+  f.style.left=(cx(u)-12)+'px';f.style.top=(geo.y-8)+'px';arena.appendChild(f);
+  anim(f,[{transform:'translateY(0) scale(.6)',opacity:0},{transform:'translateY(-14px) scale(1.15)',opacity:1,offset:.25},{transform:'translateY(-46px) scale(1)',opacity:0}],900).then(()=>f.remove());
+}
+async function tag(u,text){
+  const el=els[u.uid];if(!el)return;
+  const t=document.createElement('div');t.className='tag';t.textContent=text;
+  arena.appendChild(t);t.style.left=Math.max(4,Math.min(geo.W-t.offsetWidth-4,cx(u)-t.offsetWidth/2))+'px';t.style.top=(geo.y-34)+'px';
+  anim(el.querySelector('.body'),[{boxShadow:'0 0 0 0 rgba(240,181,69,.9)'},{boxShadow:'0 0 0 14px rgba(240,181,69,0)'}],600);
+  await anim(t,[{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none',offset:.2},{opacity:1,offset:.8},{opacity:0}],1000);
+  t.remove();
+}
+function hit(u,n,color='var(--hit)'){
+  if(n<=0)return;u.hp-=n;u.hurt=true;refresh(u);pop(u,'hp');float(u,'-'+n,color);
+  const el=els[u.uid];if(el)anim(el.querySelector('.body'),[{transform:'translateX(0)'},{transform:'translateX(-6px) rotate(-4deg)'},{transform:'translateX(6px) rotate(4deg)'},{transform:'translateX(-3px)'},{transform:'none'}],320);
+}
+function buff(u,a,h){u.atk+=a;u.hp+=h;refresh(u);if(a)pop(u,'atk');if(h)pop(u,'hp');float(u,`+${a}/+${h}`,'var(--buff)')}
+async function shoot(from,to){
+  const d=document.createElement('div');d.className='shot';arena.appendChild(d);
+  const y=geo.y+geo.s/2-6;
+  await anim(d,[{transform:`translate(${cx(from)-6}px,${y}px)`},{transform:`translate(${(cx(from)+cx(to))/2-6}px,${y-geo.s*1.1}px)`,offset:.5},{transform:`translate(${cx(to)-6}px,${y}px)`}],520,'linear');
+  d.remove();
+}
+async function lunge(u){
+  const dir=u.side==='L'?1:-1,el=els[u.uid].querySelector('.body');
+  return anim(el,[{transform:'none'},{transform:`translateX(${-dir*geo.slot*.18}px)`,offset:.3},{transform:`translateX(${dir*geo.slot*.42}px) scale(1.08)`,offset:.5},{transform:'none'}],620,'ease-in-out');
+}
+
+async function ability(u,ctx={}){
+  switch(u.fx){
+    case'snipe':{const f=foes(u);if(!f.length)return;const t=f[Math.floor(Math.random()*f.length)];await tag(u,'Disparo certero');await shoot(u,t);hit(t,u.n);break}
+    case'aoe':{const f=foes(u).slice();if(!f.length)return;await tag(u,'Escupitajo ácido');await Promise.all(f.map(t=>shoot(u,t)));f.forEach(t=>hit(t,u.n,'#b6e85a'));break}
+    case'shieldFront':{const tm=team(u),i=tm.indexOf(u);const t=tm[i-1];if(!t)return;await tag(u,'Bendición');buff(t,0,u.n);break}
+    case'rage':await tag(u,'¡Furia!');buff(u,u.n,0);break;
+    case'weaken':{const t=ctx.target;if(!t||t.hp<=0)return;t.atk=Math.max(0,t.atk-u.n);refresh(t);pop(t,'atk');float(t,'-'+u.n+' ATK','#b6e85a');break}
+    case'buffBehind':{const t=ctx.behind;if(!t)return;await tag(u,'Último aliento');buff(t,u.n,u.n);break}
+    case'grow':await tag(u,'Cosecha de almas');buff(u,u.n,u.n);break;
+  }
+}
+async function startAbilities(){
+  const order=[];for(let i=0;i<5;i++){if(T.L[i])order.push(T.L[i]);if(T.R[i])order.push(T.R[i])}
+  for(const u of order)if(u.on==='start'&&u.hp>0){await ability(u);await wait(150)}
+}
+async function resolveHurt(){
+  const list=[...T.L,...T.R].filter(u=>u.hurt);list.forEach(u=>u.hurt=false);
+  for(const u of list)if(u.on==='hurt'&&u.hp>0)await ability(u);
+}
+async function resolveFaints(){
+  let dead=[...T.L,...T.R].filter(u=>u.hp<=0);
+  while(dead.length){
+    const info=dead.map(u=>{const tm=team(u),i=tm.indexOf(u);return{u,tm,i,behind:tm.slice(i+1).find(x=>x.hp>0)}});
+    await Promise.all(info.map(({u})=>anim(els[u.uid],[{opacity:1,filter:'none'},{opacity:0,filter:'grayscale(1) blur(2px)'}],450)));
+    info.forEach(({u,tm})=>{tm.splice(tm.indexOf(u),1);els[u.uid].remove();delete els[u.uid]});
+    layout();await wait(250);
+    for(const {u,tm,i,behind} of info){
+      if(u.on==='faint'){
+        if(u.fx==='summon'&&tm.length<5){await tag2(u,tm,i)}
+        else if(u.fx==='buffBehind'&&behind&&behind.hp>0)await ability(u,{behind});
+      }
+      for(const a of tm)if(a.on==='allyFaint'&&a.hp>0)await ability(a);
+    }
+    await resolveHurt();
+    dead=[...T.L,...T.R].filter(u=>u.hp<=0);
+  }
+}
+async function tag2(u,tm,i){
+  const nu=mk('huesos',u.side);tm.splice(Math.min(i,tm.length),0,nu);
+  const el=makeEl(nu);layout();
+  el.style.transition='none';place(nu);el.offsetWidth;el.style.transition='';
+  await anim(el,[{opacity:0},{opacity:1}],400);await tag(nu,'Se alza de nuevo');
+}
+
+function render(){
+  arena.innerHTML='';els={};measure();
+  [...T.L,...T.R].forEach(u=>{const el=makeEl(u);el.style.transition='none';place(u);el.offsetWidth;el.style.transition=''});
+  const li=t=>t.map(u=>`<li><b>${u.name}</b> · ${u.atk} ATK / ${u.hp} PV${u.text?`<span>${u.text}</span>`:''}</li>`).join('');
+  document.getElementById('roster').innerHTML=`<div class="col"><h2>Tu equipo (de delante a atrás)</h2><ol>${li(T.L)}</ol></div><div class="col"><h2>Rival (de delante a atrás)</h2><ol>${li(T.R)}</ol></div>`;
+}
+function setup(newTeams){
+  if(newTeams||!teamsDef)teamsDef={L:randTeam(),R:randTeam()};
+  UID=0;T={L:teamsDef.L.map(id=>mk(id,'L')),R:teamsDef.R.map(id=>mk(id,'R'))};render();
+}
+async function fight(){
+  if(running)return;running=true;setBtns();
+  if(arena.querySelector('.banner'))setup(false);
+  await wait(200);
+  await startAbilities();await resolveHurt();await resolveFaints();
+  let rounds=0;
+  while(T.L.length&&T.R.length&&rounds<60){
+    rounds++;const a=T.L[0],b=T.R[0];
+    const la=lunge(a),lb=lunge(b);await wait(310);
+    const da=a.atk,db=b.atk;hit(b,da);hit(a,db);
+    anim(arena,[{transform:'none'},{transform:'translate(2px,-2px)'},{transform:'translate(-2px,1px)'},{transform:'none'}],200);
+    await Promise.all([la,lb]);
+    if(a.on==='hit')await ability(a,{target:b});
+    if(b.on==='hit')await ability(b,{target:a});
+    await resolveHurt();await resolveFaints();await wait(200);
+  }
+  const res=T.L.length&&!T.R.length?'¡Victoria!':!T.L.length&&T.R.length?'Derrota':'Empate';
+  const bn=document.createElement('div');bn.className='banner';bn.textContent=res;arena.appendChild(bn);
+  anim(bn,[{opacity:0,transform:'scale(.7)'},{opacity:1,transform:'scale(1)'}],400,'cubic-bezier(.2,1.6,.4,1)');
+  running=false;setBtns();
+}
+function setBtns(){['fight','again','shuffle'].forEach(id=>document.getElementById(id).disabled=running)}
+document.getElementById('fight').onclick=fight;
+document.getElementById('again').onclick=()=>{if(!running){setup(false);fight()}};
+document.getElementById('shuffle').onclick=()=>{if(!running)setup(true)};
+document.getElementById('speed').onclick=e=>{speed=speed===1?2:1;e.target.textContent='Velocidad x'+speed;document.documentElement.style.setProperty('--t',(350/speed)+'ms')};
+let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(!running){const b=arena.querySelector('.banner');render();if(b)arena.appendChild(b)}else{measure();Object.values(els).forEach(el=>el.style.width=geo.s+'px');layout()}},150)});
+teamsDef={L:['caballero','berserker','arquero','chaman','clerigo'],R:['zombi','basilisco','esqueleto','escupidor','nigromante']};
+setup(false);
+</script>
+
+</body></html>
