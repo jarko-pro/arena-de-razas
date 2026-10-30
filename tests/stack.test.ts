@@ -60,8 +60,10 @@ describe('Niveles por copias', () => {
   })
 
   it('el progreso cuenta hacia el siguiente nivel', () => {
-    expect(levelProgress(unit(1, 'grunt', 2))).toEqual({ have: 2, need: 3 })
-    expect(levelProgress(unit(1, 'grunt', 4))).toEqual({ have: 1, need: 3 })
+    expect(levelProgress(unit(1, 'grunt', 1))).toEqual({ have: 0, need: 2 })
+    expect(levelProgress(unit(1, 'grunt', 2))).toEqual({ have: 1, need: 2 })
+    expect(levelProgress(unit(1, 'grunt', 3))).toEqual({ have: 0, need: 3 })
+    expect(levelProgress(unit(1, 'grunt', 5))).toEqual({ have: 2, need: 3 })
     expect(levelProgress(unit(1, 'grunt', 6))).toBeNull()
   })
 })
@@ -168,6 +170,22 @@ describe('Juntar dos unidades del equipo', () => {
   it('no gasta oro', () => {
     const base = shopWith([], [unit(1, 'grunt'), unit(2, 'grunt')])
     expect(expectOk(merge(base, 0, 1)).gold).toBe(base.gold)
+  })
+
+  it('desde nivel 2 bastan 3 compras encima para llegar a nivel 3', () => {
+    let state = shopWith(['grunt', 'grunt', 'grunt'], [unit(1, 'grunt', 3)])
+    const levels: number[] = []
+    for (const slot of [0, 1, 2]) {
+      state = expectOk(buy(state, slot, 0))
+      levels.push(state.team[0]?.level ?? 0)
+    }
+    expect(levels).toEqual([2, 2, 3])
+  })
+
+  it('solo junta unidades del mismo nivel', () => {
+    const members = [unit(1, 'grunt', 1), unit(2, 'grunt', 3)]
+    expect(merge(shopWith([], members), 0, 1)).toEqual({ ok: false, error: 'differentLevel' })
+    expect(merge(shopWith([], members), 1, 0)).toEqual({ ok: false, error: 'differentLevel' })
   })
 
   it('no se puede pasar de nivel 3 juntando', () => {

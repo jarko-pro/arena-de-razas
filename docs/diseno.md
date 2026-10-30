@@ -76,8 +76,9 @@ Se gana la partida al conseguir **10 victorias**. Se pierde al quedarse **sin vi
 - **Nivel 2** al llegar a **3 copias** en total; **nivel 3** al llegar a **6 copias** en total. El nivel 3 es el máximo: no se pueden apilar más copias.
 - **Comprar encima**: soltar una unidad de la tienda sobre una unidad igual del equipo suma 1 copia. Está permitido aunque el equipo tenga los 5 huecos llenos.
 - **Comprar en hueco libre**: la unidad ocupa ese hueco como unidad independiente.
-- **Juntar dos del equipo**: arrastrar una unidad del equipo sobre otra igual suma sus copias en el hueco de destino y libera el otro. Si la suma pasa de 6 copias, la acción no se permite.
+- **Juntar dos del equipo**: arrastrar una unidad del equipo sobre otra igual suma sus copias en el hueco de destino y libera el otro. Solo se pueden juntar unidades **del mismo nivel** (una de nivel 1 no se junta con una de nivel 2; para subir una de nivel 2 se compran copias encima). Si la suma pasa de 6 copias, la acción no se permite.
 - Los cambios permanentes se **conservan** al apilar. Si se juntan dos unidades del equipo, se queda el mayor de los dos bonus de ATK y el mayor de los dos bonus de PV.
+- Los puntos de experiencia muestran las copias que faltan para el siguiente nivel: 2 en nivel 1 (○○) y 3 en nivel 2 (○○○). Al subir de nivel empiezan vacíos.
 - Al comprar apilando, primero se apila; si sube de nivel se dispara "Al subir de nivel" y después "Al comprar", con el valor del nivel resultante.
 
 | Nivel | Estadísticas | Valor de la habilidad (`n`) |

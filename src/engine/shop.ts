@@ -55,6 +55,7 @@ export type ShopError =
   | 'noUnit'
   | 'maxLevel'
   | 'notSameUnit'
+  | 'differentLevel'
 
 /** Lo que ha pasado en una acción, para que la interfaz lo muestre. */
 export type ShopEvent =
@@ -82,6 +83,7 @@ export const SHOP_ERROR_TEXT: Record<ShopError, string> = {
   noUnit: 'No hay ninguna unidad en esa posición.',
   maxLevel: 'Esa unidad no puede pasar del nivel 3.',
   notSameUnit: 'Solo se pueden juntar unidades iguales.',
+  differentLevel: 'Solo se pueden juntar unidades del mismo nivel.',
 }
 
 /** Huecos de la tienda: 3 (rondas 1‑2), 4 (rondas 3‑4), 5 (ronda 5 en adelante). */
@@ -113,13 +115,16 @@ export function levelForCopies(copies: number): Level {
   return 1
 }
 
-/** Progreso hacia el siguiente nivel, para los puntos de experiencia. */
+/**
+ * Progreso hacia el siguiente nivel, para los puntos de experiencia: copias
+ * apiladas desde el nivel actual de las que hacen falta para subir. Nivel 1:
+ * 0-1 de 2; nivel 2: 0-2 de 3.
+ */
 export function levelProgress(unit: OwnedUnit): { have: number; need: number } | null {
   if (unit.level >= MAX_LEVEL) return null
   const from = COPIES_FOR_LEVEL[unit.level]
   const to = COPIES_FOR_LEVEL[(unit.level + 1) as Level]
-  // Nivel 1: 1-3 copias de 3; nivel 2: 0-2 copias más de 3.
-  return unit.level === 1 ? { have: unit.copies, need: to } : { have: unit.copies - from, need: to - from }
+  return { have: unit.copies - from, need: to - from }
 }
 
 /** Siguiente generador de la ronda: misma semilla y mismas acciones = mismos resultados. */
@@ -329,14 +334,16 @@ export function buy(state: ShopState, slot: number, position?: number): ShopResu
 }
 
 /**
- * Junta la unidad de `from` sobre la de `to`, que debe ser igual: suma sus
- * copias en `to` y libera `from`. Se queda el mayor bonus de ATK y de PV.
+ * Junta la unidad de `from` sobre la de `to`, que debe ser igual y del mismo
+ * nivel: suma sus copias en `to` y libera `from`. Se queda el mayor bonus de
+ * ATK y de PV.
  */
 export function merge(state: ShopState, from: number, to: number): ShopResult {
   const source = state.team[from]
   const target = state.team[to]
   if (!source || !target || from === to) return { ok: false, error: 'noUnit' }
   if (source.defId !== target.defId) return { ok: false, error: 'notSameUnit' }
+  if (source.level !== target.level) return { ok: false, error: 'differentLevel' }
   if (source.copies + target.copies > MAX_COPIES) return { ok: false, error: 'maxLevel' }
 
   const maxBonus = (a?: number, b?: number): number | undefined =>

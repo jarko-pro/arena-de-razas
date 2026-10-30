@@ -258,9 +258,10 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
     if (!pick) return targets
     const unit = unitOf(pick)
     if (!unit) return targets
-    const copies = pick.kind === 'team' ? (state.team[teamIndex(pick.id)]?.copies ?? 1) : 1
+    const source = pick.kind === 'team' ? state.team[teamIndex(pick.id)] : undefined
+    const copies = source?.copies ?? 1
     state.team.forEach((member, index) => {
-      if (pick.kind === 'team' && member.id === pick.id) return
+      if (source && (member.id === source.id || member.level !== source.level)) return
       if (member.defId === unit.defId && member.copies + copies <= MAX_COPIES) targets.add(index)
     })
     return targets

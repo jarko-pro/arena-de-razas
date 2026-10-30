@@ -58,7 +58,7 @@ Estimación con Claude Code: 20‑32 h en total.
 ## Hito 4 – Niveles por apilamiento, congelar y rachas (≈2‑3 h)
 
 **Tareas**
-- Apilar copias en el mismo hueco: comprar encima de una unidad igual o juntar dos del equipo. Nivel 2 con 3 copias y nivel 3 con 6.
+- Apilar copias en el mismo hueco: comprar encima de una unidad igual o juntar dos del equipo del mismo nivel. Nivel 2 con 3 copias y nivel 3 con 6.
 - Estadísticas y `n` según nivel.
 - Disparador "Al subir de nivel" en el motor.
 - Indicador de nivel y de experiencia (copias) en cada unidad; resaltar dónde se puede apilar al arrastrar.
