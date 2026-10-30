@@ -1,7 +1,7 @@
 // Ejecución de habilidades: resolución de objetivos y despacho de efectos.
 // Nada de casos especiales por unidad: todo sale de los datos de units.ts.
 
-import type { BattleUnit, Side } from './combat'
+import type { BattleUnit, Side, TeamUnit } from './combat'
 import type { Rng } from './rng'
 import {
   UNITS,
@@ -265,4 +265,102 @@ export function fireTrigger(
   if (!plan) return
   ctx.ability(unit, ability.label)
   plan()
+}
+
+// ------------------------------------------------------------- Tienda ---
+
+/** Mejora permanente que una habilidad de tienda da a una unidad del equipo. */
+export interface ShopBuff {
+  /** Posición en el equipo resultante. */
+  readonly index: number
+  readonly atk: number
+  readonly hp: number
+}
+
+export interface ShopTriggerResult<T extends TeamUnit> {
+  readonly team: T[]
+  /** Nombre de la habilidad si se ha disparado. */
+  readonly label?: string
+  readonly buffs: readonly ShopBuff[]
+}
+
+/** Objetivos de una habilidad de tienda: solo existen aliados. */
+function resolveShopTargets(
+  team: readonly TeamUnit[],
+  index: number,
+  target: Target,
+  rng: Rng,
+): number[] {
+  const self = team[index]
+  const allIndices = team.map((_, i) => i)
+  const matching = (filter: { race?: string; excludeSelf?: boolean }): number[] =>
+    allIndices.filter((i) => {
+      const unit = team[i]
+      if (!unit || !self) return false
+      if (filter.excludeSelf === true && i === index) return false
+      return filter.race === undefined || UNITS[unit.defId].race === filter.race
+    })
+
+  switch (target.kind) {
+    case 'self':
+      return self ? [index] : []
+    case 'allyAhead':
+      return index > 0 ? [index - 1] : []
+    case 'allyBehind':
+      return index + 1 < team.length ? [index + 1] : []
+    case 'randomAlly': {
+      const chosen = rng.pick(matching(target))
+      return chosen === undefined ? [] : [chosen]
+    }
+    case 'allAllies':
+      return matching(target)
+    case 'frontEnemy':
+    case 'randomEnemy':
+    case 'allEnemies':
+    case 'hitTarget':
+    case 'enemyBehindTarget':
+      return []
+  }
+}
+
+/**
+ * Dispara "Al comprar" o "Al vender" de la unidad en `index`. Fuera del
+ * combate todo cambio es permanente, así que se guarda como bonificación.
+ * Solo los efectos de mejora tienen sentido en la tienda; el resto no hace nada.
+ */
+export function fireShopTrigger<T extends TeamUnit>(
+  team: readonly T[],
+  index: number,
+  trigger: Trigger,
+  rng: Rng,
+): ShopTriggerResult<T> {
+  const unit = team[index]
+  const ability = unit ? UNITS[unit.defId].ability : undefined
+  const unchanged: ShopTriggerResult<T> = { team: [...team], buffs: [] }
+  if (!unit || !ability || ability.trigger !== trigger) return unchanged
+
+  const effect = ability.effect
+  if (effect.kind !== 'buff') return unchanged
+  const level = unit.level ?? 1
+  const atk = resolveValue(effect.atk, level)
+  const hp = resolveValue(effect.hp, level)
+  if (atk === 0 && hp === 0) return unchanged
+  const targets = resolveShopTargets(team, index, effect.target, rng)
+  if (targets.length === 0) return unchanged
+
+  const next = [...team]
+  for (const i of targets) {
+    const target = next[i]
+    if (!target) continue
+    next[i] = {
+      ...target,
+      atkBonus: (target.atkBonus ?? 0) + atk,
+      hpBonus: (target.hpBonus ?? 0) + hp,
+    }
+  }
+  return {
+    team: next,
+    label: ability.label,
+    buffs: targets.map((i) => ({ index: i, atk, hp })),
+  }
 }

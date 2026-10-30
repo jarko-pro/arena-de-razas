@@ -25,6 +25,15 @@ export const MAX_ROUNDS = 100
 export interface TeamUnit {
   readonly defId: UnitId
   readonly level?: Level
+  /** Mejoras permanentes ganadas en la tienda ("Al comprar", "Al vender"). */
+  readonly atkBonus?: number
+  readonly hpBonus?: number
+}
+
+/** Estadísticas con las que la unidad empieza el combate. */
+export function teamUnitStats(unit: TeamUnit): { atk: number; hp: number } {
+  const base = statsForLevel(UNITS[unit.defId], unit.level ?? 1)
+  return { atk: base.atk + (unit.atkBonus ?? 0), hp: base.hp + (unit.hpBonus ?? 0) }
 }
 
 /** Estado mutable de una unidad dentro de un combate. */
@@ -134,12 +143,8 @@ export function simulateBattle(
     defId: UnitId,
     level: Level,
     side: Side,
-    flatStats?: number,
+    stats: { atk: number; hp: number } = statsForLevel(UNITS[defId], level),
   ): BattleUnit => {
-    const stats =
-      flatStats === undefined
-        ? statsForLevel(UNITS[defId], level)
-        : { atk: flatStats, hp: flatStats }
     const unit: BattleUnit = {
       uid: nextUid++,
       defId,
@@ -245,7 +250,12 @@ export function simulateBattle(
       let inserted = 0
       for (let i = 0; i < count; i++) {
         if (line.length >= MAX_LINE) break
-        const unit = createUnit(unitId, 1, summoner.side, stats)
+        const unit = createUnit(
+          unitId,
+          1,
+          summoner.side,
+          stats === undefined ? undefined : { atk: stats, hp: stats },
+        )
         const at = Math.min(index + inserted, line.length)
         line.splice(at, 0, unit)
         events.push({ type: 'summon', side: summoner.side, index: at, unit: snapshot(unit) })
@@ -329,7 +339,7 @@ export function simulateBattle(
   for (const side of SIDES) {
     const team = side === 'A' ? teamA : teamB
     for (const entry of team.slice(0, MAX_LINE)) {
-      lines[side].push(createUnit(entry.defId, entry.level ?? 1, side))
+      lines[side].push(createUnit(entry.defId, entry.level ?? 1, side, teamUnitStats(entry)))
     }
   }
 

@@ -18,25 +18,6 @@ import { UNITS, abilityText } from '../engine/units'
 import { UnitCard } from './UnitCard'
 import './arena.css'
 
-/** Equipos fijos de la pantalla de prueba, elegidos para ver muchos disparadores. */
-const PLAYER_TEAM: readonly TeamUnit[] = [
-  { defId: 'knight' },
-  { defId: 'berserker' },
-  { defId: 'archer' },
-  { defId: 'shaman' },
-  { defId: 'cleric' },
-]
-
-const RIVAL_TEAM: readonly TeamUnit[] = [
-  { defId: 'saurian' },
-  { defId: 'basilisk' },
-  { defId: 'skeleton' },
-  { defId: 'spitter' },
-  { defId: 'necromancer' },
-]
-
-const SEED = 2026
-
 const BANNER: Record<Outcome, string> = {
   victoryA: '¡Victoria!',
   victoryB: 'Derrota',
@@ -49,12 +30,19 @@ function describe(unit: UnitSnapshot): string {
   return text === '' ? def.name : `${def.name} · ${text}`
 }
 
-interface BattleTestScreenProps {
+interface BattleScreenProps {
+  readonly round: number
+  readonly playerTeam: readonly TeamUnit[]
+  readonly rivalTeam: readonly TeamUnit[]
+  readonly seed: string
   readonly onBack: () => void
 }
 
-export function BattleTestScreen({ onBack }: BattleTestScreenProps) {
-  const result = useMemo(() => simulateBattle(PLAYER_TEAM, RIVAL_TEAM, SEED), [])
+export function BattleScreen({ round, playerTeam, rivalTeam, seed, onBack }: BattleScreenProps) {
+  const result = useMemo(
+    () => simulateBattle(playerTeam, rivalTeam, seed),
+    [playerTeam, rivalTeam, seed],
+  )
   const units = useMemo(() => collectBattleUnits(result), [result])
 
   const arenaRef = useRef<HTMLDivElement>(null)
@@ -124,23 +112,23 @@ export function BattleTestScreen({ onBack }: BattleTestScreenProps) {
   return (
     <div className="pantalla-combate">
       <div className="cabecera-combate">
-        <h1>Arena de Razas</h1>
-        <p>
-          Prueba del motor: el combate se simula entero y la pantalla solo reproduce sus{' '}
-          {result.events.length} eventos.
-        </p>
+        <h1>Ronda {round}</h1>
+        <p>Rival de prueba provisional hasta que lleguen los bots.</p>
       </div>
 
       <div className="controles">
         <button type="button" className="btn primary" onClick={play} disabled={playing}>
           {outcome === null ? 'Combatir' : 'Repetir'}
         </button>
-        <button type="button" className="btn" onClick={onBack} disabled={playing}>
-          Volver
+        <button
+          type="button"
+          className={outcome === null ? 'btn' : 'btn primary'}
+          onClick={onBack}
+          disabled={playing}
+        >
+          Ir a la ronda {round + 1}
         </button>
-        <span className="semilla">
-          Semilla {SEED} · {result.rounds} rondas
-        </span>
+        <span className="semilla">{result.rounds} golpes</span>
       </div>
 
       <div className="bandos">
@@ -182,10 +170,6 @@ export function BattleTestScreen({ onBack }: BattleTestScreenProps) {
         ))}
       </div>
 
-      <p className="nota">
-        Todo el movimiento son tweens de GSAP sobre fichas estáticas: avanzar, chocar, temblar,
-        números flotantes, proyectiles y desvanecerse.
-      </p>
     </div>
   )
 }

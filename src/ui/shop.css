@@ -1,0 +1,218 @@
+/* Tienda: ofertas arriba, equipo abajo. Reutiliza las fichas de arena.css. */
+
+.pantalla-tienda {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding-block: 16px 32px;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cabecera-tienda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cabecera-tienda h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(26px, 5vw, 40px);
+  margin: 0;
+  color: var(--accent);
+}
+
+.indicadores {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.oro {
+  font-family: var(--display);
+  font-size: 26px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.oro small {
+  font-family: var(--body);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.zona {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.zona h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 17px;
+  margin: 0;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(6px, 2vw, 14px);
+}
+
+.hueco {
+  min-height: 100%;
+  aspect-ratio: 0.8;
+  border-radius: 14px;
+  padding: clamp(4px, 1.2vw, 10px);
+  padding-bottom: 0;
+}
+
+.equipo .hueco {
+  background: rgb(0 0 0 / 18%);
+  border: 2px dashed var(--line);
+  transition:
+    border-color 100ms ease,
+    background-color 100ms ease;
+}
+
+.hueco.destino {
+  border-color: var(--accent);
+  background: rgb(240 181 69 / 14%);
+}
+
+.carta {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Sin esto el dedo desplaza la página en vez de arrastrar la unidad. */
+  touch-action: none;
+  border-radius: 12px;
+}
+
+.carta .mono {
+  font-size: clamp(14px, 4vw, 24px);
+}
+
+.carta .st {
+  height: clamp(16px, 4vw, 24px);
+  font-size: clamp(11px, 3vw, 15px);
+}
+
+.carta .nm {
+  color: var(--fg);
+  font-size: clamp(9px, 2.4vw, 12px);
+  margin-top: 13px;
+}
+
+.carta.sel .body {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.carta.arrastrando {
+  opacity: 0.35;
+}
+
+.fantasma {
+  position: fixed;
+  z-index: 50;
+  width: clamp(56px, 16vw, 96px);
+  transform: translate(-50%, -60%) scale(1.08);
+  pointer-events: none;
+  filter: drop-shadow(0 10px 12px rgb(0 0 0 / 45%));
+}
+
+.fantasma .carta {
+  cursor: grabbing;
+}
+
+.zona-venta {
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 800;
+  transition:
+    border-color 100ms ease,
+    background-color 100ms ease,
+    color 100ms ease;
+}
+
+.zona-venta.activa {
+  border-color: var(--hit);
+  color: var(--fg);
+}
+
+.zona-venta.destino {
+  background: rgb(255 90 69 / 18%);
+}
+
+.mensaje {
+  margin: 0;
+  min-height: 1.4em;
+  color: var(--buff);
+  font-weight: 800;
+}
+
+.detalle {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+  min-height: 7.5rem;
+}
+
+.ayuda {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.detalle-unidad {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.detalle-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+
+.detalle-cabecera b {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 20px;
+}
+
+.detalle-cabecera span,
+.detalle-stats span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.detalle-stats,
+.detalle-habilidad {
+  margin: 0;
+}
+
+.detalle-stats {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
