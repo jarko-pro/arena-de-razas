@@ -65,6 +65,19 @@
   margin: 0;
 }
 
+.cabecera-equipo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cabecera-equipo span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .fila {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

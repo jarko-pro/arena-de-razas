@@ -276,9 +276,14 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
       </div>
 
       <section className="zona">
-        <h2>Tu equipo (de delante a atrás)</h2>
+        <div className="cabecera-equipo">
+          <h2>Tu equipo</h2>
+          <span>← atrás · delante →</span>
+        </div>
+        {/* Igual que en la arena: el equipo mira a la derecha y la posición 1 es la de más a la derecha. */}
         <div className="fila equipo">
-          {Array.from({ length: MAX_TEAM_SIZE }, (_, index) => {
+          {Array.from({ length: MAX_TEAM_SIZE }, (_, column) => {
+            const index = MAX_TEAM_SIZE - 1 - column
             const unit = state.team[index]
             const over = ghost?.over?.kind === 'team' && ghost.over.index === index
             return (
