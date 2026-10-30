@@ -58,17 +58,17 @@ Estimación con Claude Code: 20‑32 h en total.
 ## Hito 4 – Niveles por apilamiento, congelar y rachas (≈2‑3 h)
 
 **Tareas**
-- Apilar copias en el mismo hueco: comprar encima de una unidad igual o juntar dos del equipo del mismo nivel. Nivel 2 con 3 copias y nivel 3 con 6.
+- Apilar copias en el mismo hueco: comprar encima de una unidad igual o juntar dos del equipo del mismo nivel. Nivel 2 con 3 copias y nivel 3 con 9 (3 unidades de nivel 2).
 - Estadísticas y `n` según nivel.
 - Disparador "Al subir de nivel" en el motor.
 - Indicador de nivel y de experiencia (copias) en cada unidad; resaltar dónde se puede apilar al arrastrar.
 - Animación al subir de nivel (destello y escala).
-- Congelar y descongelar unidades de la tienda.
+- Congelar y descongelar toda la tienda con un botón; con la tienda congelada no hay reroll.
 - Oro extra por rachas de victorias o derrotas, con indicador de racha y desglose del oro.
 
 **Terminado cuando**
-- Pruebas para: comprar encima con el equipo lleno, 3 copias dan nivel 2 y 6 dan nivel 3, no se pasa de nivel 3 (ni comprando ni juntando), juntar dos unidades libera un hueco, se conservan los bonus permanentes, escalado de fichas invocadas.
-- Pruebas para congelar: el reroll y el cambio de ronda mantienen las congeladas; comprar una congelada libera el hueco.
+- Pruebas para: comprar encima con el equipo lleno, 3 copias dan nivel 2 y 9 dan nivel 3, no se pasa de nivel 3 (ni comprando ni juntando), juntar dos unidades libera un hueco, se conservan los bonus permanentes, escalado de fichas invocadas.
+- Pruebas para congelar: con la tienda congelada no hay reroll; al cambiar de ronda conserva sus ofertas y rellena los huecos vacíos.
 - Pruebas para rachas: tabla de oro extra para rachas de 1 a 6; el empate y el cambio de victoria a derrota reinician la racha.
 - Apilar, congelar y la racha se ven y se entienden en pantalla.
 

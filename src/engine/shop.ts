@@ -12,14 +12,14 @@ export const REROLL_COST = 1
 export const MAX_LEVEL: Level = 3
 
 /** Copias totales apiladas con las que se alcanza cada nivel. */
-export const COPIES_FOR_LEVEL: Record<Level, number> = { 1: 1, 2: 3, 3: 6 }
+export const COPIES_FOR_LEVEL: Record<Level, number> = { 1: 1, 2: 3, 3: 9 }
 export const MAX_COPIES = COPIES_FOR_LEVEL[MAX_LEVEL]
 
 /** Unidad del equipo con un id estable para la interfaz y sus copias apiladas. */
 export interface OwnedUnit extends TeamUnit {
   readonly id: number
   readonly level: Level
-  /** Copias apiladas en este hueco (experiencia): de 1 a 6. */
+  /** Copias apiladas en este hueco (experiencia): de 1 a 9. */
   readonly copies: number
 }
 
@@ -27,8 +27,6 @@ export interface OwnedUnit extends TeamUnit {
 export interface ShopOffer {
   readonly id: number
   readonly defId: UnitId
-  /** Las congeladas no se sustituyen al hacer reroll ni al cambiar de ronda. */
-  readonly frozen?: boolean
 }
 
 export interface ShopState {
@@ -38,6 +36,8 @@ export interface ShopState {
   readonly startGold: { readonly base: number; readonly streak: number }
   /** Huecos de la tienda; null si ya se ha comprado lo que había. */
   readonly offers: readonly (ShopOffer | null)[]
+  /** Tienda congelada: sus ofertas pasan a la ronda siguiente y no se puede hacer reroll. */
+  readonly frozen: boolean
   /** Equipo de delante a atrás. */
   readonly team: readonly OwnedUnit[]
   readonly seed: string
@@ -56,6 +56,7 @@ export type ShopError =
   | 'maxLevel'
   | 'notSameUnit'
   | 'differentLevel'
+  | 'frozen'
 
 /** Lo que ha pasado en una acción, para que la interfaz lo muestre. */
 export type ShopEvent =
@@ -84,6 +85,7 @@ export const SHOP_ERROR_TEXT: Record<ShopError, string> = {
   maxLevel: 'Esa unidad no puede pasar del nivel 3.',
   notSameUnit: 'Solo se pueden juntar unidades iguales.',
   differentLevel: 'Solo se pueden juntar unidades del mismo nivel.',
+  frozen: 'La tienda está congelada: descongélala para hacer reroll.',
 }
 
 /** Huecos de la tienda: 3 (rondas 1‑2), 4 (rondas 3‑4), 5 (ronda 5 en adelante). */
@@ -108,7 +110,7 @@ export function shopPool(round: number, races: readonly Race[]): readonly UnitId
   )
 }
 
-/** Nivel que dan esas copias apiladas: 3 → nivel 2, 6 → nivel 3. */
+/** Nivel que dan esas copias apiladas: 3 → nivel 2, 9 → nivel 3. */
 export function levelForCopies(copies: number): Level {
   if (copies >= COPIES_FOR_LEVEL[3]) return 3
   if (copies >= COPIES_FOR_LEVEL[2]) return 2
@@ -118,7 +120,7 @@ export function levelForCopies(copies: number): Level {
 /**
  * Progreso hacia el siguiente nivel, para los puntos de experiencia: copias
  * apiladas desde el nivel actual de las que hacen falta para subir. Nivel 1:
- * 0-1 de 2; nivel 2: 0-2 de 3.
+ * 0-1 de 2; nivel 2: 0-5 de 6.
  */
 export function levelProgress(unit: OwnedUnit): { have: number; need: number } | null {
   if (unit.level >= MAX_LEVEL) return null
@@ -133,7 +135,7 @@ function nextRng(state: ShopState): { rng: Rng; state: ShopState } {
   return { rng, state: { ...state, rolls: state.rolls + 1 } }
 }
 
-/** Rellena los huecos de la ronda; las ofertas congeladas se quedan donde están. */
+/** Rellena los huecos de la ronda; si la tienda está congelada, sus ofertas se quedan donde están. */
 function rollOffers(state: ShopState): ShopState {
   const { rng, state: next } = nextRng(state)
   const pool = shopPool(next.round, next.races)
@@ -142,7 +144,7 @@ function rollOffers(state: ShopState): ShopState {
   const offers: (ShopOffer | null)[] = []
   for (let i = 0; i < slots; i++) {
     const current = next.offers[i]
-    if (current?.frozen === true) {
+    if (next.frozen && current) {
       offers.push(current)
       continue
     }
@@ -174,6 +176,7 @@ export function createShop(
     gold: GOLD_PER_ROUND + streakGold,
     startGold: { base: GOLD_PER_ROUND, streak: streakGold },
     offers: [],
+    frozen: false,
     team: owned,
     seed,
     races: [...races],
@@ -183,8 +186,9 @@ export function createShop(
 }
 
 /**
- * Tienda de la ronda siguiente: mismo equipo, oro nuevo (no se acumula) y
- * las ofertas congeladas en su hueco.
+ * Tienda de la ronda siguiente: mismo equipo y oro nuevo (no se acumula). Si
+ * la tienda estaba congelada, conserva sus ofertas y sigue congelada; los
+ * huecos vacíos y los nuevos se rellenan.
  */
 export function nextShop(previous: ShopState, streakGold = 0): ShopState {
   return rollOffers({
@@ -192,7 +196,7 @@ export function nextShop(previous: ShopState, streakGold = 0): ShopState {
     round: previous.round + 1,
     gold: GOLD_PER_ROUND + streakGold,
     startGold: { base: GOLD_PER_ROUND, streak: streakGold },
-    offers: previous.offers.map((offer) => (offer?.frozen === true ? offer : null)),
+    offers: previous.frozen ? previous.offers : [],
     rolls: 0,
   })
 }
@@ -388,8 +392,9 @@ export function sell(state: ShopState, index: number): ShopResult {
   }
 }
 
-/** Sustituye las ofertas no congeladas, también los huecos vacíos. */
+/** Sustituye todas las ofertas, también los huecos vacíos. No se puede con la tienda congelada. */
 export function reroll(state: ShopState): ShopResult {
+  if (state.frozen) return { ok: false, error: 'frozen' }
   if (state.gold < REROLL_COST) return { ok: false, error: 'notEnoughGold' }
   return {
     ok: true,
@@ -398,16 +403,9 @@ export function reroll(state: ShopState): ShopResult {
   }
 }
 
-/** Congela o descongela la oferta de un hueco. Es gratis. */
-export function toggleFreeze(state: ShopState, slot: number): ShopResult {
-  const offer = state.offers[slot]
-  if (!offer) return { ok: false, error: 'noOffer' }
-  const toggled: ShopOffer = offer.frozen === true ? { id: offer.id, defId: offer.defId } : { ...offer, frozen: true }
-  return {
-    ok: true,
-    state: { ...state, offers: state.offers.map((o, i) => (i === slot ? toggled : o)) },
-    events: [],
-  }
+/** Congela o descongela toda la tienda. Es gratis. */
+export function toggleFreeze(state: ShopState): ShopResult {
+  return { ok: true, state: { ...state, frozen: !state.frozen }, events: [] }
 }
 
 /** Mueve la unidad de `from` a `to` dentro del equipo. */

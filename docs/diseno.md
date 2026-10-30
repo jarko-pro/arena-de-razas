@@ -42,16 +42,17 @@ Se gana la partida al conseguir **10 victorias**. Se pierde al quedarse **sin vi
 **Acciones en la tienda**:
 - Comprar una unidad de la tienda: en un hueco libre del equipo, o encima de una unidad igual para apilarla (esto último aunque el equipo esté lleno).
 - Vender una unidad del equipo.
-- Reroll: sustituir todas las unidades de la tienda que no estén congeladas.
-- Congelar o descongelar una unidad de la tienda (gratis).
+- Reroll: sustituir todas las unidades de la tienda. No se puede con la tienda congelada.
+- Congelar o descongelar la tienda (gratis).
 - Reordenar el equipo arrastrando unidades, o juntar dos unidades iguales.
 - Terminar la tienda y pasar al combate.
 
 **Congelar**:
-- Cada unidad de la tienda se puede congelar o descongelar gratis.
-- Las unidades congeladas **no se sustituyen** al hacer reroll ni al empezar la ronda siguiente; siguen en su hueco.
-- Si en la ronda siguiente la tienda tiene más huecos, los nuevos se rellenan normalmente.
-- Al comprar una unidad congelada, el hueco queda libre y deja de estar congelado.
+- Un único botón congela o descongela **toda la tienda**, gratis.
+- Con la tienda congelada **no se puede hacer reroll**; hay que descongelarla antes.
+- Al empezar la ronda siguiente, una tienda congelada **conserva sus unidades** en su hueco y sigue congelada hasta que el jugador la descongele.
+- Si en la ronda siguiente la tienda tiene más huecos, o hay huecos vacíos porque se compró su unidad, se rellenan normalmente.
+- Comprar con la tienda congelada está permitido; el hueco queda vacío hasta la ronda siguiente.
 - Una unidad congelada se conserva aunque su tier sea superior al de la ronda.
 
 **Oro extra por rachas**:
@@ -73,12 +74,12 @@ Se gana la partida al conseguir **10 victorias**. Se pierde al quedarse **sin vi
 
 - Las copias de una misma unidad **se apilan en un único hueco**, sumando experiencia.
 - Cada unidad empieza en nivel 1 con 1 copia.
-- **Nivel 2** al llegar a **3 copias** en total; **nivel 3** al llegar a **6 copias** en total. El nivel 3 es el máximo: no se pueden apilar más copias.
+- **Nivel 2** al llegar a **3 copias** en total; **nivel 3** al llegar a **9 copias** en total (lo mismo que 3 unidades de nivel 2). El nivel 3 es el máximo: no se pueden apilar más copias.
 - **Comprar encima**: soltar una unidad de la tienda sobre una unidad igual del equipo suma 1 copia. Está permitido aunque el equipo tenga los 5 huecos llenos.
 - **Comprar en hueco libre**: la unidad ocupa ese hueco como unidad independiente.
-- **Juntar dos del equipo**: arrastrar una unidad del equipo sobre otra igual suma sus copias en el hueco de destino y libera el otro. Solo se pueden juntar unidades **del mismo nivel** (una de nivel 1 no se junta con una de nivel 2; para subir una de nivel 2 se compran copias encima). Si la suma pasa de 6 copias, la acción no se permite.
+- **Juntar dos del equipo**: arrastrar una unidad del equipo sobre otra igual suma sus copias en el hueco de destino y libera el otro. Solo se pueden juntar unidades **del mismo nivel** (una de nivel 1 no se junta con una de nivel 2; para subir una de nivel 2 se compran copias encima). Si la suma pasa de 9 copias, la acción no se permite.
 - Los cambios permanentes se **conservan** al apilar. Si se juntan dos unidades del equipo, se queda el mayor de los dos bonus de ATK y el mayor de los dos bonus de PV.
-- Los puntos de experiencia muestran las copias que faltan para el siguiente nivel: 2 en nivel 1 (○○) y 3 en nivel 2 (○○○). Al subir de nivel empiezan vacíos.
+- Los puntos de experiencia muestran las copias que faltan para el siguiente nivel: 2 en nivel 1 (○○) y 6 en nivel 2 (○○○○○○). Al subir de nivel empiezan vacíos.
 - Al comprar apilando, primero se apila; si sube de nivel se dispara "Al subir de nivel" y después "Al comprar", con el valor del nivel resultante.
 
 | Nivel | Estadísticas | Valor de la habilidad (`n`) |

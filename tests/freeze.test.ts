@@ -19,49 +19,50 @@ function expectOk(result: ShopResult): ShopState {
 describe('Congelar la tienda', () => {
   it('congelar y descongelar es gratis', () => {
     const shop = createShop(1, [], 'hielo', RACES)
-    const frozen = expectOk(toggleFreeze(shop, 1))
-    expect(frozen.offers[1]?.frozen).toBe(true)
+    expect(shop.frozen).toBe(false)
+    const frozen = expectOk(toggleFreeze(shop))
+    expect(frozen.frozen).toBe(true)
     expect(frozen.gold).toBe(shop.gold)
-    expect(expectOk(toggleFreeze(frozen, 1)).offers[1]?.frozen).toBeUndefined()
+    expect(frozen.offers).toEqual(shop.offers)
+    expect(expectOk(toggleFreeze(frozen)).frozen).toBe(false)
   })
 
-  it('el reroll mantiene las congeladas en su hueco', () => {
-    let state = expectOk(toggleFreeze(createShop(1, [], 'hielo', RACES), 1))
-    const kept = state.offers[1]
-    for (let i = 0; i < 10; i++) {
-      state = expectOk(reroll({ ...state, gold: 10 }))
-      expect(state.offers[1]).toEqual(kept)
-      expect(state.offers[0]?.frozen).toBeUndefined()
-    }
+  it('con la tienda congelada no se puede hacer reroll', () => {
+    const frozen = expectOk(toggleFreeze(createShop(1, [], 'hielo', RACES)))
+    expect(reroll(frozen)).toEqual({ ok: false, error: 'frozen' })
+    const thawed = expectOk(toggleFreeze(frozen))
+    expect(expectOk(reroll(thawed)).gold).toBe(thawed.gold - 1)
   })
 
-  it('al pasar de ronda se mantienen las congeladas y se rellena el resto', () => {
-    const round2 = expectOk(toggleFreeze(createShop(2, [], 'hielo', RACES), 2))
-    const kept = round2.offers[2]
+  it('al pasar de ronda conserva las ofertas, rellena los huecos y sigue congelada', () => {
+    const round2 = expectOk(toggleFreeze(createShop(2, [], 'hielo', RACES)))
     const round3 = nextShop(round2)
     expect(round3.round).toBe(3)
+    expect(round3.frozen).toBe(true)
     expect(round3.offers).toHaveLength(slotsForRound(3))
-    expect(round3.offers[2]).toEqual(kept)
+    expect(round3.offers.slice(0, round2.offers.length)).toEqual(round2.offers)
     expect(round3.offers.every((offer) => offer !== null)).toBe(true)
-    // Las no congeladas son ofertas nuevas.
-    expect(round3.offers[0]?.id).not.toBe(round2.offers[0]?.id)
   })
 
-  it('una congelada de tier superior se conserva', () => {
+  it('sin congelar, la ronda siguiente trae ofertas nuevas', () => {
+    const round1 = createShop(1, [], 'hielo', RACES)
+    const ids = new Set(round1.offers.map((offer) => offer?.id))
+    expect(nextShop(round1).offers.some((offer) => ids.has(offer?.id))).toBe(false)
+  })
+
+  it('una oferta de tier superior se conserva congelada', () => {
     const shop = createShop(1, [], 'hielo', RACES)
-    const withKnight = { ...shop, offers: [{ id: 50, defId: 'knight' as const, frozen: true }] }
-    const state = expectOk(reroll(withKnight))
-    expect(state.offers[0]).toEqual({ id: 50, defId: 'knight', frozen: true })
-    expect(nextShop(state).offers[0]).toEqual({ id: 50, defId: 'knight', frozen: true })
+    const withKnight = { ...shop, frozen: true, offers: [{ id: 50, defId: 'knight' as const }] }
+    expect(nextShop(withKnight).offers[0]).toEqual({ id: 50, defId: 'knight' })
   })
 
-  it('comprar una congelada libera el hueco y deja de estar congelado', () => {
-    const frozen = expectOk(toggleFreeze(createShop(1, [], 'hielo', RACES), 0))
+  it('comprar con la tienda congelada deja el hueco vacío hasta la ronda siguiente', () => {
+    const frozen = expectOk(toggleFreeze(createShop(1, [], 'hielo', RACES)))
     const bought = expectOk(buy(frozen, 0))
     expect(bought.offers[0]).toBeNull()
-    expect(bought.team[0]).not.toHaveProperty('frozen')
-    // En la ronda siguiente ese hueco se rellena con una oferta nueva.
-    expect(nextShop(bought).offers[0]?.frozen).toBeUndefined()
+    const next = nextShop(bought)
+    expect(next.offers[0]).not.toBeNull()
+    expect(next.offers.slice(1, 3)).toEqual(frozen.offers.slice(1, 3))
   })
 
   it('el equipo y su experiencia pasan a la ronda siguiente', () => {

@@ -41,6 +41,7 @@
   padding: 9px 16px;
   border-radius: 999px;
   font-weight: 800;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn.primary {

@@ -363,23 +363,11 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
           {state.offers.map((offer, slot) => (
             <div className="hueco" key={offer?.id ?? `vacio-${slot}`}>
               {offer && (
-                <>
-                  <ShopCard
-                    unit={offer}
-                    frozen={offer.frozen === true}
-                    {...handlersFor({ kind: 'offer', id: offer.id }, offer)}
-                  />
-                  <button
-                    type="button"
-                    className={offer.frozen === true ? 'candado activo' : 'candado'}
-                    aria-pressed={offer.frozen === true}
-                    aria-label={offer.frozen === true ? 'Descongelar' : 'Congelar'}
-                    title={offer.frozen === true ? 'Descongelar' : 'Congelar'}
-                    onClick={() => apply(toggleFreeze(state, slot))}
-                  >
-                    {offer.frozen === true ? '🔒' : '🔓'}
-                  </button>
-                </>
+                <ShopCard
+                  unit={offer}
+                  frozen={state.frozen}
+                  {...handlersFor({ kind: 'offer', id: offer.id }, offer)}
+                />
               )}
             </div>
           ))}
@@ -391,9 +379,18 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
           type="button"
           className="btn"
           onClick={() => apply(reroll(state))}
-          disabled={state.gold < REROLL_COST}
+          disabled={state.frozen || state.gold < REROLL_COST}
+          title={state.frozen ? 'Descongela la tienda para hacer reroll' : undefined}
         >
           Reroll ({REROLL_COST} oro)
+        </button>
+        <button
+          type="button"
+          className={state.frozen ? 'btn congelar activo' : 'btn congelar'}
+          aria-pressed={state.frozen}
+          onClick={() => apply(toggleFreeze(state))}
+        >
+          {state.frozen ? '🔒 Descongelar tienda' : '🔓 Congelar tienda'}
         </button>
         <button
           type="button"
@@ -467,7 +464,7 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
           <p className="ayuda">
             Pulsa una unidad para ver su habilidad. Doble clic o doble toque para comprar, o
             arrástrala a tu equipo; suéltala sobre una igual para apilarla. Arrastra tus unidades
-            para reordenarlas, juntarlas o venderlas. El candado congela una oferta.
+            para reordenarlas, juntarlas o venderlas. Congelar la tienda guarda sus ofertas para la ronda siguiente.
           </p>
         )}
       </section>

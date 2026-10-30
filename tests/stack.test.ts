@@ -55,16 +55,16 @@ const fullTeam = (): OwnedUnit[] => [
 ]
 
 describe('Niveles por copias', () => {
-  it('3 copias dan nivel 2 y 6 copias dan nivel 3', () => {
-    expect([1, 2, 3, 4, 5, 6].map(levelForCopies)).toEqual([1, 1, 2, 2, 2, 3])
+  it('3 copias dan nivel 2 y 9 copias dan nivel 3', () => {
+    expect([1, 2, 3, 4, 5, 6, 7, 8, 9].map(levelForCopies)).toEqual([1, 1, 2, 2, 2, 2, 2, 2, 3])
   })
 
   it('el progreso cuenta hacia el siguiente nivel', () => {
     expect(levelProgress(unit(1, 'grunt', 1))).toEqual({ have: 0, need: 2 })
     expect(levelProgress(unit(1, 'grunt', 2))).toEqual({ have: 1, need: 2 })
-    expect(levelProgress(unit(1, 'grunt', 3))).toEqual({ have: 0, need: 3 })
-    expect(levelProgress(unit(1, 'grunt', 5))).toEqual({ have: 2, need: 3 })
-    expect(levelProgress(unit(1, 'grunt', 6))).toBeNull()
+    expect(levelProgress(unit(1, 'grunt', 3))).toEqual({ have: 0, need: 6 })
+    expect(levelProgress(unit(1, 'grunt', 8))).toEqual({ have: 5, need: 6 })
+    expect(levelProgress(unit(1, 'grunt', 9))).toBeNull()
   })
 })
 
@@ -116,21 +116,21 @@ describe('Comprar encima', () => {
     expect(eventsOfResult(result)).toContainEqual({ type: 'levelUp', unitId: 1, level: 2 })
   })
 
-  it('6 copias dan nivel 3 con las estadísticas de nivel 3', () => {
-    const state = expectOk(buy(shopWith(['grunt'], [unit(1, 'grunt', 5)]), 0, 0))
-    expect(summary(state)).toEqual(['grunt:3:6'])
+  it('9 copias dan nivel 3 con las estadísticas de nivel 3', () => {
+    const state = expectOk(buy(shopWith(['grunt'], [unit(1, 'grunt', 8)]), 0, 0))
+    expect(summary(state)).toEqual(['grunt:3:9'])
     const fused = state.team[0]
     expect(fused && teamUnitStats(fused)).toEqual({ atk: 7, hp: 6 })
   })
 
   it('no se puede pasar de nivel 3 comprando encima', () => {
-    const state = shopWith(['grunt'], [unit(1, 'grunt', 6)])
+    const state = shopWith(['grunt'], [unit(1, 'grunt', 9)])
     expect(buy(state, 0, 0)).toEqual({ ok: false, error: 'maxLevel' })
   })
 
   it('sin destino, una unidad de nivel 3 no admite más copias y se compra aparte', () => {
-    const state = expectOk(buy(shopWith(['grunt'], [unit(1, 'grunt', 6)]), 0))
-    expect(summary(state)).toEqual(['grunt:3:6', 'grunt:1:1'])
+    const state = expectOk(buy(shopWith(['grunt'], [unit(1, 'grunt', 9)]), 0))
+    expect(summary(state)).toEqual(['grunt:3:9', 'grunt:1:1'])
   })
 
   it('se conservan los bonus permanentes al apilar', () => {
@@ -172,14 +172,13 @@ describe('Juntar dos unidades del equipo', () => {
     expect(expectOk(merge(base, 0, 1)).gold).toBe(base.gold)
   })
 
-  it('desde nivel 2 bastan 3 compras encima para llegar a nivel 3', () => {
-    let state = shopWith(['grunt', 'grunt', 'grunt'], [unit(1, 'grunt', 3)])
-    const levels: number[] = []
-    for (const slot of [0, 1, 2]) {
-      state = expectOk(buy(state, slot, 0))
-      levels.push(state.team[0]?.level ?? 0)
-    }
-    expect(levels).toEqual([2, 2, 3])
+  it('3 unidades de nivel 2 juntas forman una de nivel 3', () => {
+    const members = [unit(1, 'grunt', 3), unit(2, 'grunt', 3), unit(3, 'grunt', 3)]
+    const twoMerged = expectOk(merge(shopWith([], members), 0, 1))
+    expect(summary(twoMerged)).toEqual(['grunt:2:6', 'grunt:2:3'])
+    const result = merge(twoMerged, 1, 0)
+    expect(summary(expectOk(result))).toEqual(['grunt:3:9'])
+    expect(eventsOfResult(result)).toContainEqual({ type: 'levelUp', unitId: 2, level: 3 })
   })
 
   it('solo junta unidades del mismo nivel', () => {
@@ -189,10 +188,10 @@ describe('Juntar dos unidades del equipo', () => {
   })
 
   it('no se puede pasar de nivel 3 juntando', () => {
-    const members = [unit(1, 'grunt', 4), unit(2, 'grunt', 3)]
+    const members = [unit(1, 'grunt', 7), unit(2, 'grunt', 3)]
     expect(merge(shopWith([], members), 0, 1)).toEqual({ ok: false, error: 'maxLevel' })
-    const exact = [unit(1, 'grunt', 3), unit(2, 'grunt', 3)]
-    expect(summary(expectOk(merge(shopWith([], exact), 0, 1)))).toEqual(['grunt:3:6'])
+    const exact = [unit(1, 'grunt', 6), unit(2, 'grunt', 3)]
+    expect(summary(expectOk(merge(shopWith([], exact), 0, 1)))).toEqual(['grunt:3:9'])
   })
 
   it('solo junta unidades iguales', () => {
