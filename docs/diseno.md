@@ -6,7 +6,7 @@ Título provisional. Este documento es la fuente de verdad de las reglas. Los va
 
 Partida individual contra rivales. Cada ronda tiene dos fases:
 
-1. **Tienda**: el jugador gasta oro en comprar, vender, reordenar y fusionar unidades.
+1. **Tienda**: el jugador gasta oro en comprar, vender, reordenar y apilar unidades.
 2. **Combate**: su equipo lucha automáticamente contra un equipo rival.
 
 Se gana la partida al conseguir **10 victorias**. Se pierde al quedarse **sin vidas**.
@@ -185,7 +185,7 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 Revisar tras el punto de control del hito 5, si las rondas se sienten vacías.
 
 **Dentro de la partida**
-- Racha: +1 de oro en la tienda siguiente por cada 2 victorias seguidas.
+- ~~Racha~~: ya implementada con su propia tabla (ver «Oro extra por rachas»).
 - Consuelo: +1 de oro en la tienda siguiente tras perder.
 - Elegir premio tras ganar: una opción entre 2‑3 (unidad gratis, +1/+1 permanente a una unidad, 2 de oro).
 

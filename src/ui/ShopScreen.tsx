@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { captureCards, playStack, type CardShot } from '../anim/shopFx'
 import { MAX_TEAM_SIZE, teamUnitStats, type TeamUnit } from '../engine/combat'
 import type { Streak } from '../engine/game'
@@ -184,14 +184,25 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
     null,
   )
 
+  const stopStackRef = useRef(new Set<() => void>())
+
   // Tras pintar el equipo, la copia apilada vuela hasta su unidad.
   useLayoutEffect(() => {
     const pending = stackRef.current
     const root = rootRef.current
     if (!pending || !root) return
     stackRef.current = null
-    playStack(root, pending.shots, pending.targetId, pending.levelUp)
+    stopStackRef.current.add(playStack(root, pending.shots, pending.targetId, pending.levelUp))
   }, [state])
+
+  // Al ir al combate no deben quedar copias volando por la pantalla.
+  useEffect(() => {
+    const stoppers = stopStackRef.current
+    return () => {
+      for (const stop of stoppers) stop()
+      stoppers.clear()
+    }
+  }, [])
 
   const offerIndex = (id: number): number => state.offers.findIndex((o) => o?.id === id)
   const teamIndex = (id: number): number => state.team.findIndex((u) => u.id === id)
@@ -339,7 +350,6 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
       <header className="cabecera-tienda">
         <h1>Tienda</h1>
         <div className="indicadores">
-          <span>Ronda {state.round}</span>
           <span>Tier {tierForRound(state.round)}</span>
           <span className="oro" aria-label={`${state.gold} de oro`}>
             {state.gold} <small>oro</small>

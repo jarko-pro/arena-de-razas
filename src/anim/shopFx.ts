@@ -23,16 +23,17 @@ export function captureCards(root: ParentNode, ids: readonly number[]): CardShot
 
 /**
  * La copia apilada vuela hasta su unidad. Si sube de nivel, la unidad da un
- * salto con un destello dorado; si no, un pequeño rebote.
+ * salto con un destello dorado; si no, un pequeño rebote. Devuelve una
+ * función que corta la animación y quita las copias (al salir de la tienda).
  */
 export function playStack(
   root: ParentNode,
   shots: readonly CardShot[],
   targetId: number,
   levelUp: boolean,
-): void {
+): () => void {
   const target = root.querySelector<HTMLElement>(unitSelector(targetId))
-  if (!target) return
+  if (!target) return () => {}
   const to = target.getBoundingClientRect()
   const timeline = gsap.timeline()
 
@@ -75,4 +76,9 @@ export function playStack(
       ease: levelUp ? 'elastic.out(1, 0.5)' : 'power2.out',
       clearProps: 'filter,transform',
     })
+
+  return () => {
+    timeline.kill()
+    for (const { clone } of shots) clone.remove()
+  }
 }

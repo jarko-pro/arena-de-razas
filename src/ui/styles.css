@@ -105,3 +105,120 @@ body {
   outline: 2px solid var(--fg);
   outline-offset: 3px;
 }
+
+/* --------------------------------------------------------------- Partida --- */
+
+/* Envuelve tienda, combate y resultado con la barra de indicadores arriba. */
+.partida {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hud {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  padding: 8px max(16px, env(safe-area-inset-left, 0px));
+  background: rgb(20 15 11 / 92%);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud b {
+  color: var(--fg);
+  font-size: 1.1em;
+}
+
+/* ------------------------------------------------- Resultado y final --- */
+
+.pantalla-resultado,
+.pantalla-final {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  background: radial-gradient(120% 70% at 50% 0%, #2a2019, var(--bg) 70%);
+}
+
+.pantalla-resultado h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 12vw, 4rem);
+  text-shadow: 0 3px 0 rgb(0 0 0 / 45%);
+}
+
+.resultado-victoryA h1 {
+  color: var(--accent);
+}
+
+.resultado-victoryB h1 {
+  color: #ff8f7a;
+}
+
+.resultado-draw h1 {
+  color: var(--fg);
+}
+
+.resultado-ronda,
+.resultado-racha {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.resultado-cambio {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.pantalla-resultado .boton-principal,
+.pantalla-final .boton-principal {
+  margin-top: 0.8rem;
+}
+
+.final-derrota .titulo {
+  color: #ff8f7a;
+}
+
+.resumen-final {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 0;
+}
+
+.resumen-final div {
+  min-width: 6.5rem;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.resumen-final dt {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.resumen-final dd {
+  margin: 2px 0 0;
+  font-family: var(--display);
+  font-size: 26px;
+  color: var(--fg);
+}

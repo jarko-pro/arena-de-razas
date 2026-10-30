@@ -1,28 +1,34 @@
 import { useState } from 'react'
-import type { TeamUnit } from '../engine/combat'
-import { NO_STREAK, streakGold, updateStreak, type Streak } from '../engine/game'
-import { battleTeam, createShop, nextShop, type ShopState } from '../engine/shop'
+import {
+  finishRound,
+  newGame,
+  prepareBattle,
+  type BattleSetup,
+  type GameState,
+} from '../engine/game'
 import { RACES } from '../engine/units'
 import { BattleScreen } from './BattleScreen'
+import { EndScreen } from './EndScreen'
+import { GameHud } from './GameHud'
+import { ResultScreen } from './ResultScreen'
 import { ShopScreen } from './ShopScreen'
 import { StartScreen } from './StartScreen'
-import { testRival } from './testRivals'
 
-/** Pantallas de la versión actual. El hito 5 sustituye esto por el bucle de partida. */
+/** Inicio → tienda → combate → resultado → tienda… → final. */
 type Screen =
   | { readonly kind: 'start' }
-  | { readonly kind: 'shop'; readonly shop: ShopState; readonly streak: Streak }
-  | {
-      readonly kind: 'battle'
-      readonly shop: ShopState
-      readonly streak: Streak
-      readonly playerTeam: readonly TeamUnit[]
-      readonly rivalTeam: readonly TeamUnit[]
-    }
+  | { readonly kind: 'shop'; readonly game: GameState }
+  | { readonly kind: 'battle'; readonly game: GameState; readonly battle: BattleSetup }
+  | { readonly kind: 'result'; readonly game: GameState }
+  | { readonly kind: 'end'; readonly game: GameState }
 
 /** Semilla de la partida; a partir de aquí toda la aleatoriedad la decide el motor. */
 function newSeed(): string {
   return Date.now().toString(36)
+}
+
+function startGame(): Screen {
+  return { kind: 'shop', game: newGame(newSeed(), RACES) }
 }
 
 export function App() {
@@ -30,49 +36,55 @@ export function App() {
 
   switch (screen.kind) {
     case 'start':
-      return (
-        <StartScreen
-          onPlay={() =>
-            setScreen({
-              kind: 'shop',
-              shop: createShop(1, [], newSeed(), RACES),
-              streak: NO_STREAK,
-            })
-          }
-        />
-      )
+      return <StartScreen onPlay={() => setScreen(startGame())} />
 
-    case 'shop':
+    case 'shop': {
+      const { game } = screen
       return (
-        <ShopScreen
-          state={screen.shop}
-          streak={screen.streak}
-          onChange={(shop) => setScreen({ ...screen, shop })}
-          onFight={() =>
-            setScreen({
-              ...screen,
-              kind: 'battle',
-              playerTeam: battleTeam(screen.shop),
-              rivalTeam: testRival(screen.shop.round),
-            })
-          }
-        />
-      )
-
-    case 'battle': {
-      const { shop } = screen
-      return (
-        <BattleScreen
-          round={shop.round}
-          playerTeam={screen.playerTeam}
-          rivalTeam={screen.rivalTeam}
-          seed={`${shop.seed}:combate:${shop.round}`}
-          onBack={(outcome) => {
-            const streak = updateStreak(screen.streak, outcome)
-            setScreen({ kind: 'shop', shop: nextShop(shop, streakGold(streak.count)), streak })
-          }}
-        />
+        <div className="partida">
+          <GameHud game={game} />
+          <ShopScreen
+            state={game.shop}
+            streak={game.streak}
+            onChange={(shop) => setScreen({ kind: 'shop', game: { ...game, shop } })}
+            onFight={() => setScreen({ kind: 'battle', game, battle: prepareBattle(game) })}
+          />
+        </div>
       )
     }
+
+    case 'battle': {
+      const { game, battle } = screen
+      return (
+        <div className="partida">
+          <GameHud game={game} />
+          <BattleScreen
+            round={battle.round}
+            playerTeam={battle.playerTeam}
+            rivalTeam={battle.rivalTeam}
+            seed={battle.seed}
+            onDone={(outcome) => setScreen({ kind: 'result', game: finishRound(game, outcome) })}
+          />
+        </div>
+      )
+    }
+
+    case 'result': {
+      const { game } = screen
+      return (
+        <div className="partida">
+          <GameHud game={game} round={game.lastRound?.round} />
+          <ResultScreen
+            game={game}
+            onContinue={() =>
+              setScreen(game.status === 'playing' ? { kind: 'shop', game } : { kind: 'end', game })
+            }
+          />
+        </div>
+      )
+    }
+
+    case 'end':
+      return <EndScreen game={screen.game} onPlayAgain={() => setScreen(startGame())} />
   }
 }

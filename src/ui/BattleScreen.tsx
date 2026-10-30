@@ -35,11 +35,11 @@ interface BattleScreenProps {
   readonly playerTeam: readonly TeamUnit[]
   readonly rivalTeam: readonly TeamUnit[]
   readonly seed: string
-  /** Vuelve a la tienda con el resultado del combate. */
-  readonly onBack: (outcome: Outcome) => void
+  /** Termina el combate con su resultado. */
+  readonly onDone: (outcome: Outcome) => void
 }
 
-export function BattleScreen({ round, playerTeam, rivalTeam, seed, onBack }: BattleScreenProps) {
+export function BattleScreen({ round, playerTeam, rivalTeam, seed, onDone }: BattleScreenProps) {
   const result = useMemo(
     () => simulateBattle(playerTeam, rivalTeam, seed),
     [playerTeam, rivalTeam, seed],
@@ -114,7 +114,7 @@ export function BattleScreen({ round, playerTeam, rivalTeam, seed, onBack }: Bat
     <div className="pantalla-combate">
       <div className="cabecera-combate">
         <h1>Ronda {round}</h1>
-        <p>Rival de prueba provisional hasta que lleguen los bots.</p>
+        <p>Rival provisional al azar hasta que lleguen los bots.</p>
       </div>
 
       <div className="controles">
@@ -124,10 +124,10 @@ export function BattleScreen({ round, playerTeam, rivalTeam, seed, onBack }: Bat
         <button
           type="button"
           className={outcome === null ? 'btn' : 'btn primary'}
-          onClick={() => onBack(result.outcome)}
+          onClick={() => onDone(result.outcome)}
           disabled={playing}
         >
-          Ir a la ronda {round + 1}
+          Ver resultado
         </button>
         <span className="semilla">{result.rounds} golpes</span>
       </div>
