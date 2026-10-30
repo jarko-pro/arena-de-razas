@@ -10,16 +10,21 @@ import { RACES } from '../engine/units'
 import { BattleScreen } from './BattleScreen'
 import { EndScreen } from './EndScreen'
 import { GameHud } from './GameHud'
-import { ResultScreen } from './ResultScreen'
+import { RoundSummary } from './RoundSummary'
 import { ShopScreen } from './ShopScreen'
 import { StartScreen } from './StartScreen'
 
-/** Inicio → tienda → combate → resultado → tienda… → final. */
+/** Inicio → tienda → combate (con su resultado) → tienda… → final. */
 type Screen =
   | { readonly kind: 'start' }
   | { readonly kind: 'shop'; readonly game: GameState }
-  | { readonly kind: 'battle'; readonly game: GameState; readonly battle: BattleSetup }
-  | { readonly kind: 'result'; readonly game: GameState }
+  | {
+      readonly kind: 'battle'
+      readonly game: GameState
+      readonly battle: BattleSetup
+      /** Partida tras aplicar el resultado, en cuanto el combate termina. */
+      readonly after: GameState | null
+    }
   | { readonly kind: 'end'; readonly game: GameState }
 
 /** Semilla de la partida; a partir de aquí toda la aleatoriedad la decide el motor. */
@@ -47,39 +52,39 @@ export function App() {
             state={game.shop}
             streak={game.streak}
             onChange={(shop) => setScreen({ kind: 'shop', game: { ...game, shop } })}
-            onFight={() => setScreen({ kind: 'battle', game, battle: prepareBattle(game) })}
+            onFight={() =>
+              setScreen({ kind: 'battle', game, battle: prepareBattle(game), after: null })
+            }
           />
         </div>
       )
     }
 
     case 'battle': {
-      const { game, battle } = screen
+      const { game, battle, after } = screen
       return (
         <div className="partida">
-          <GameHud game={game} />
+          <GameHud game={after ?? game} round={battle.round} />
           <BattleScreen
             round={battle.round}
             playerTeam={battle.playerTeam}
             rivalTeam={battle.rivalTeam}
             seed={battle.seed}
-            onDone={(outcome) => setScreen({ kind: 'result', game: finishRound(game, outcome) })}
-          />
-        </div>
-      )
-    }
-
-    case 'result': {
-      const { game } = screen
-      return (
-        <div className="partida">
-          <GameHud game={game} round={game.lastRound?.round} />
-          <ResultScreen
-            game={game}
-            onContinue={() =>
-              setScreen(game.status === 'playing' ? { kind: 'shop', game } : { kind: 'end', game })
-            }
-          />
+            onFinish={(outcome) => setScreen({ ...screen, after: finishRound(game, outcome) })}
+          >
+            {after && (
+              <RoundSummary
+                game={after}
+                onContinue={() =>
+                  setScreen(
+                    after.status === 'playing'
+                      ? { kind: 'shop', game: after }
+                      : { kind: 'end', game: after },
+                  )
+                }
+              />
+            )}
+          </BattleScreen>
         </div>
       )
     }

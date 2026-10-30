@@ -139,7 +139,49 @@ body {
 
 /* ------------------------------------------------- Resultado y final --- */
 
-.pantalla-resultado,
+/* Resultado de la ronda, debajo de la arena del combate. */
+.resultado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left-width: 5px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.resultado-victoryA {
+  border-left-color: var(--accent);
+}
+
+.resultado-victoryB {
+  border-left-color: #ff8f7a;
+}
+
+.resultado-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resultado-cambio,
+.resultado-racha {
+  margin: 0;
+  font-weight: 800;
+}
+
+.resultado-cambio {
+  font-size: 1.1rem;
+}
+
+.resultado-racha {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .pantalla-final {
   flex: 1;
   display: flex;
@@ -152,40 +194,6 @@ body {
   background: radial-gradient(120% 70% at 50% 0%, #2a2019, var(--bg) 70%);
 }
 
-.pantalla-resultado h1 {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: clamp(2.5rem, 12vw, 4rem);
-  text-shadow: 0 3px 0 rgb(0 0 0 / 45%);
-}
-
-.resultado-victoryA h1 {
-  color: var(--accent);
-}
-
-.resultado-victoryB h1 {
-  color: #ff8f7a;
-}
-
-.resultado-draw h1 {
-  color: var(--fg);
-}
-
-.resultado-ronda,
-.resultado-racha {
-  margin: 0;
-  color: var(--muted);
-  font-weight: 800;
-}
-
-.resultado-cambio {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 800;
-}
-
-.pantalla-resultado .boton-principal,
 .pantalla-final .boton-principal {
   margin-top: 0.8rem;
 }

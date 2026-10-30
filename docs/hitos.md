@@ -79,7 +79,7 @@ Estimación con Claude Code: 20‑32 h en total.
 **Tareas**
 - `game.ts`: estado de partida con ronda, vidas, victorias y equipo.
 - Flujo: inicio → tienda → combate → resultado → tienda… → fin.
-- Pantalla de resultado de cada combate y pantalla final de victoria o derrota.
+- Resultado de cada combate en la propia pantalla de combate y pantalla final de victoria o derrota.
 - Indicadores de ronda, vidas y victorias siempre visibles.
 - Rival provisional: equipo aleatorio del tier de la ronda.
 

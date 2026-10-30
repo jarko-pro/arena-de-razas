@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   buildBattleTimeline,
   collectBattleUnits,
@@ -35,11 +35,20 @@ interface BattleScreenProps {
   readonly playerTeam: readonly TeamUnit[]
   readonly rivalTeam: readonly TeamUnit[]
   readonly seed: string
-  /** Termina el combate con su resultado. */
-  readonly onDone: (outcome: Outcome) => void
+  /** Se llama una vez, cuando el combate termina de verse o se salta. */
+  readonly onFinish: (outcome: Outcome) => void
+  /** Resultado de la ronda: se muestra debajo de la arena al terminar. */
+  readonly children?: ReactNode
 }
 
-export function BattleScreen({ round, playerTeam, rivalTeam, seed, onDone }: BattleScreenProps) {
+export function BattleScreen({
+  round,
+  playerTeam,
+  rivalTeam,
+  seed,
+  onFinish,
+  children,
+}: BattleScreenProps) {
   const result = useMemo(
     () => simulateBattle(playerTeam, rivalTeam, seed),
     [playerTeam, rivalTeam, seed],
@@ -55,6 +64,7 @@ export function BattleScreen({ round, playerTeam, rivalTeam, seed, onDone }: Bat
   const [geo, setGeo] = useState<Geometry | null>(null)
   const [playing, setPlaying] = useState(false)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
+  const [finished, setFinished] = useState(false)
 
   const getDom = useCallback((): ArenaDom | null => {
     const arena = arenaRef.current
@@ -105,10 +115,29 @@ export function BattleScreen({ round, playerTeam, rivalTeam, seed, onDone }: Bat
     timeline.eventCallback('onComplete', () => {
       setPlaying(false)
       playingRef.current = false
+      setFinished(true)
     })
     timelineRef.current = timeline
     timeline.play(0)
   }, [geo, result, getDom])
+
+  /** Lleva el combate al final sin esperar a la animación. */
+  const skip = useCallback(() => {
+    if (!playingRef.current) play()
+    timelineRef.current?.progress(1)
+  }, [play])
+
+  // Avisa una sola vez del resultado, aunque luego se repita la animación.
+  const onFinishRef = useRef(onFinish)
+  const notifiedRef = useRef(false)
+  useEffect(() => {
+    onFinishRef.current = onFinish
+  })
+  useEffect(() => {
+    if (!finished || notifiedRef.current) return
+    notifiedRef.current = true
+    onFinishRef.current(result.outcome)
+  }, [finished, result])
 
   return (
     <div className="pantalla-combate">
@@ -119,16 +148,13 @@ export function BattleScreen({ round, playerTeam, rivalTeam, seed, onDone }: Bat
 
       <div className="controles">
         <button type="button" className="btn primary" onClick={play} disabled={playing}>
-          {outcome === null ? 'Combatir' : 'Repetir'}
+          {finished ? 'Repetir' : 'Combatir'}
         </button>
-        <button
-          type="button"
-          className={outcome === null ? 'btn' : 'btn primary'}
-          onClick={() => onDone(result.outcome)}
-          disabled={playing}
-        >
-          Ver resultado
-        </button>
+        {!finished && (
+          <button type="button" className="btn" onClick={skip}>
+            Saltar
+          </button>
+        )}
         <span className="semilla">{result.rounds} golpes</span>
       </div>
 
@@ -152,6 +178,8 @@ export function BattleScreen({ round, playerTeam, rivalTeam, seed, onDone }: Bat
         <div className="capa-fx" ref={fxRef} />
         {outcome !== null && <div className="banner">{BANNER[outcome]}</div>}
       </div>
+
+      {finished && !playing && children}
 
       <div className="listas">
         {(['A', 'B'] as const).map((side) => (

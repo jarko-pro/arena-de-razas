@@ -1,4 +1,3 @@
-import type { Outcome } from '../engine/combat'
 import {
   STARTING_LIVES,
   WINS_TO_WIN,
@@ -6,12 +5,6 @@ import {
   type GameState,
   type RoundResult,
 } from '../engine/game'
-
-const TITLE: Record<Outcome, string> = {
-  victoryA: '¡Victoria!',
-  victoryB: 'Derrota',
-  draw: 'Empate',
-}
 
 function changeText(game: GameState, result: RoundResult): string {
   if (result.winsGained > 0) return `+1 victoria (${game.wins} de ${WINS_TO_WIN})`
@@ -33,25 +26,25 @@ function streakText(game: GameState): string {
   return gold > 0 ? `${label}: +${gold} de oro en la tienda.` : `${label}.`
 }
 
-interface ResultScreenProps {
+interface RoundSummaryProps {
   readonly game: GameState
   readonly onContinue: () => void
 }
 
-/** Resultado de un combate: qué ha cambiado y adónde se va ahora. */
-export function ResultScreen({ game, onContinue }: ResultScreenProps) {
+/** Resultado del combate, debajo de la arena: qué ha cambiado y adónde se va ahora. */
+export function RoundSummary({ game, onContinue }: RoundSummaryProps) {
   const result = game.lastRound
   if (!result) return null
   const over = game.status !== 'playing'
   return (
-    <main className={`pantalla-resultado resultado-${result.outcome}`}>
-      <p className="resultado-ronda">Ronda {result.round}</p>
-      <h1>{TITLE[result.outcome]}</h1>
-      <p className="resultado-cambio">{changeText(game, result)}</p>
-      {!over && <p className="resultado-racha">{streakText(game)}</p>}
-      <button type="button" className="boton-principal" onClick={onContinue}>
+    <section className={`resultado resultado-${result.outcome}`}>
+      <div className="resultado-texto">
+        <p className="resultado-cambio">{changeText(game, result)}</p>
+        {!over && <p className="resultado-racha">{streakText(game)}</p>}
+      </div>
+      <button type="button" className="btn primary" onClick={onContinue}>
         {over ? 'Ver el final' : `Ir a la ronda ${game.shop.round}`}
       </button>
-    </main>
+    </section>
   )
 }
