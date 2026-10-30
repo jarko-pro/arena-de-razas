@@ -52,6 +52,9 @@ Se gana la partida al conseguir **10 victorias**. Se pierde al quedarse **sin vi
 - **3 unidades de nivel 2** iguales se fusionan en **1 de nivel 3** (nivel máximo).
 - Al comprar la tercera copia, la fusión ocurre aunque el equipo esté lleno.
 - La unidad fusionada ocupa la posición de la copia más adelantada.
+- Las fusiones se encadenan: si al fusionar se juntan 3 unidades de nivel 2, se fusionan también en una de nivel 3.
+- La unidad fusionada conserva la **suma** de las mejoras permanentes de las 3 copias.
+- Si la compra provoca una fusión, primero se fusiona y después la unidad fusionada dispara "Al comprar" con el valor de su nuevo nivel.
 
 | Nivel | Estadísticas | Valor de la habilidad (`n`) |
 | --- | --- | --- |
@@ -148,6 +151,39 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 - Los rivales los genera un **bot** que juega la tienda con las mismas reglas, el mismo oro y las mismas rondas que el jugador.
 - Estrategia del bot: elige una raza preferida al azar, prioriza comprar unidades de esa raza y fusiones, y hace reroll si no encuentra nada útil.
 - El equipo rival de la ronda N es el que tendría un bot en la ronda N.
+
+## Ideas de recompensa (pendiente de probar, no implementar todavía)
+
+Revisar tras el punto de control del hito 5, si las rondas se sienten vacías.
+
+**Dentro de la partida**
+- Racha: +1 de oro en la tienda siguiente por cada 2 victorias seguidas.
+- Consuelo: +1 de oro en la tienda siguiente tras perder.
+- Elegir premio tras ganar: una opción entre 2‑3 (unidad gratis, +1/+1 permanente a una unidad, 2 de oro).
+
+**Entre partidas (versión 3 en adelante, con online)**
+- Rango o liga que sube al ganar partidas.
+- Desbloquear razas, unidades o comandantes jugando.
+- Resumen de los combates que ganó tu equipo guardado mientras no estabas.
+- Reto diario y aspectos cosméticos.
+
+## Selección de razas del jugador (versión 3 o posterior, no implementar todavía)
+
+**Idea**: el juego tendrá 9‑10 razas. Cada jugador configura en su perfil las **5 razas** con las que juega. Su tienda solo ofrece unidades de esas razas.
+
+**Reglas previstas**
+- Set inicial de 5 razas gratis, completo y competitivo para jugadores nuevos.
+- El resto de razas se desbloquean con **moneda del juego** ganada jugando. El dinero real, como mucho, para acelerar o para cosméticos.
+- Las razas son **alternativas, no mejoras**: ninguna raza desbloqueable puede ser más fuerte que las iniciales.
+- Los rivales (equipos guardados de otros jugadores) usan sus propias razas, así que puedes enfrentarte a razas que no tienes.
+
+**Riesgos a vigilar**
+- Combinaciones de 5 razas demasiado fuertes: validar con el script de simulación del hito 7.
+- Partidas repetitivas por usar siempre las mismas razas: valorar una raza rotativa semanal o un modo con razas aleatorias.
+
+**Requisito técnico desde ya (hito 3)**
+- La generación de la tienda recibe la **lista de razas disponibles como parámetro** (por ejemplo, `generateShop(round, races, rng)`). En la versión 1 se pasan las 4 razas existentes. No se debe asumir en ningún sitio del motor que todas las razas están siempre disponibles.
+- El bot también recibe su lista de razas como parámetro.
 
 ## Fuera de la versión 1 (no implementar todavía)
 

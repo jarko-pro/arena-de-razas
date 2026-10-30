@@ -1,15 +1,17 @@
-// Tienda: oro, compra, venta, reroll y reordenar el equipo.
-// Las fusiones llegan en el hito 4.
+// Tienda: oro, compra, venta, reroll, reordenar el equipo y fusiones.
 
 import { fireShopTrigger, type ShopBuff } from './abilities'
 import { MAX_TEAM_SIZE, type TeamUnit } from './combat'
 import { createRng, type Rng } from './rng'
-import { PLAYABLE_UNITS, type Race, type Tier, type UnitId } from './units'
+import { PLAYABLE_UNITS, type Level, type Race, type Tier, type UnitId } from './units'
 
 /** Parámetros de la tienda (diseno.md). */
 export const GOLD_PER_ROUND = 10
 export const UNIT_COST = 3
 export const REROLL_COST = 1
+/** Copias iguales que se fusionan en una de nivel superior. */
+export const COPIES_TO_FUSE = 3
+export const MAX_LEVEL: Level = 3
 
 /** Unidad del equipo con un id estable para la interfaz. */
 export interface OwnedUnit extends TeamUnit {
@@ -44,6 +46,14 @@ export type ShopEvent =
   | { readonly type: 'ability'; readonly unitId: number; readonly label: string }
   | { readonly type: 'buff'; readonly unitId: number; readonly atk: number; readonly hp: number }
   | { readonly type: 'gold'; readonly amount: number }
+  | {
+      readonly type: 'fusion'
+      /** Unidad resultante: conserva el id de la copia más adelantada. */
+      readonly unitId: number
+      /** Copias que desaparecen al fusionarse. */
+      readonly consumedIds: readonly number[]
+      readonly level: Level
+    }
 
 export type ShopResult =
   | { readonly ok: true; readonly state: ShopState; readonly events: readonly ShopEvent[] }
@@ -138,23 +148,86 @@ function shopTriggerEvents(
   return events
 }
 
+export interface Fusion {
+  readonly unitId: number
+  readonly consumedIds: readonly number[]
+  readonly level: Level
+}
+
+/** Copias de esa unidad y ese nivel que hay en el equipo. */
+export function copiesOf(team: readonly TeamUnit[], defId: UnitId, level: Level): number {
+  return team.filter((unit) => unit.defId === defId && (unit.level ?? 1) === level).length
+}
+
+/**
+ * Fusiona cada grupo de 3 copias iguales del mismo nivel en una de nivel
+ * superior, en la posición de la más adelantada y con la suma de sus mejoras.
+ * Repite hasta que no quede ningún grupo, así que las fusiones se encadenan.
+ */
+export function fuseTeam<T extends OwnedUnit>(
+  team: readonly T[],
+): { team: T[]; fusions: Fusion[] } {
+  let current = [...team]
+  const fusions: Fusion[] = []
+
+  for (;;) {
+    const group = current.find(
+      (unit) =>
+        (unit.level ?? 1) < MAX_LEVEL &&
+        copiesOf(current, unit.defId, unit.level ?? 1) >= COPIES_TO_FUSE,
+    )
+    if (!group) return { team: current, fusions }
+
+    const level = group.level ?? 1
+    const copies = current
+      .filter((unit) => unit.defId === group.defId && (unit.level ?? 1) === level)
+      .slice(0, COPIES_TO_FUSE)
+    const [first, ...consumed] = copies
+    if (!first) return { team: current, fusions }
+
+    const nextLevel = (level + 1) as Level
+    const sum = (key: 'atkBonus' | 'hpBonus'): number | undefined => {
+      const total = copies.reduce((acc, unit) => acc + (unit[key] ?? 0), 0)
+      return total === 0 ? undefined : total
+    }
+    const fused: T = { ...first, level: nextLevel, atkBonus: sum('atkBonus'), hpBonus: sum('hpBonus') }
+    current = current
+      .filter((unit) => !consumed.includes(unit))
+      .map((unit) => (unit === first ? fused : unit))
+    fusions.push({ unitId: first.id, consumedIds: consumed.map((unit) => unit.id), level: nextLevel })
+  }
+}
+
+/** Si comprar la oferta de ese hueco completaría una fusión. */
+export function wouldFuse(state: ShopState, slot: number): boolean {
+  const offer = state.offers[slot]
+  return offer !== null && offer !== undefined && copiesOf(state.team, offer.defId, 1) >= COPIES_TO_FUSE - 1
+}
+
 /**
  * Compra la unidad del hueco `slot` y la coloca en `position` (al final si no
- * se indica). Después dispara su habilidad "Al comprar".
+ * se indica). Si completa una fusión se puede comprar con el equipo lleno.
+ * Después de fusionar, la unidad resultante dispara "Al comprar".
  */
 export function buy(state: ShopState, slot: number, position?: number): ShopResult {
   const offer = state.offers[slot]
   if (!offer) return { ok: false, error: 'noOffer' }
   if (state.gold < UNIT_COST) return { ok: false, error: 'notEnoughGold' }
-  if (state.team.length >= MAX_TEAM_SIZE) return { ok: false, error: 'teamFull' }
+  if (state.team.length >= MAX_TEAM_SIZE && !wouldFuse(state, slot)) {
+    return { ok: false, error: 'teamFull' }
+  }
 
   const unit: OwnedUnit = { id: offer.id, defId: offer.defId, level: 1 }
-  const index = clampIndex(position ?? state.team.length, state.team.length)
-  const team = [...state.team]
-  team.splice(index, 0, unit)
+  const inserted = [...state.team]
+  inserted.splice(clampIndex(position ?? inserted.length, inserted.length), 0, unit)
+  const { team, fusions } = fuseTeam(inserted)
+  // La última fusión es la que contiene la copia comprada (las demás son su cadena).
+  const resultId = fusions.at(-1)?.unitId ?? unit.id
+  const index = team.findIndex((u) => u.id === resultId)
 
   const { rng, state: rolled } = nextRng(state)
   const fired = fireShopTrigger(team, index, 'onBuy', rng)
+  const result = team[index] ?? unit
   return {
     ok: true,
     state: {
@@ -165,7 +238,8 @@ export function buy(state: ShopState, slot: number, position?: number): ShopResu
     },
     events: [
       { type: 'gold', amount: -UNIT_COST },
-      ...shopTriggerEvents(fired.team, unit, fired.label, fired.buffs),
+      ...fusions.map((fusion): ShopEvent => ({ type: 'fusion', ...fusion })),
+      ...shopTriggerEvents(fired.team, result, fired.label, fired.buffs),
     ],
   }
 }

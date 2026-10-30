@@ -17,6 +17,7 @@ export function UnitCard({ unit, description, registerEl }: UnitCardProps) {
       <div className="lunge">
         <div className={`body r-${unit.race}`} title={description}>
           <span className="mono">{short(unit.name)}</span>
+          {unit.level > 1 && <span className={`nivel nivel-${unit.level}`}>Nv {unit.level}</span>}
           <span className="st atk">{unit.atk}</span>
           <span className="st hp">{unit.hp}</span>
         </div>

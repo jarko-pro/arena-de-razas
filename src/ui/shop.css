@@ -84,12 +84,12 @@
   gap: clamp(6px, 2vw, 14px);
 }
 
+/* El hueco crece con su contenido (nombre en dos líneas, puntos de copias). */
 .hueco {
-  min-height: 100%;
-  aspect-ratio: 0.8;
+  min-height: clamp(96px, 27vw, 150px);
   border-radius: 14px;
   padding: clamp(4px, 1.2vw, 10px);
-  padding-bottom: 0;
+  padding-bottom: 6px;
 }
 
 .equipo .hueco {
@@ -228,4 +228,73 @@
 .detalle-stats {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+}
+
+.detalle-fusion {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------ Niveles --- */
+
+/* La insignia .nivel está en arena.css porque también sale en combate. */
+.etiqueta-fusion {
+  position: absolute;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-family: var(--body);
+  font-size: clamp(9px, 2.2vw, 11px);
+  font-weight: 800;
+  white-space: nowrap;
+  top: -10px;
+  right: -8%;
+  background: var(--buff);
+  color: #12300c;
+  animation: latido 1.1s ease-in-out infinite;
+}
+
+@keyframes latido {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .etiqueta-fusion {
+    animation: none;
+  }
+}
+
+/* Puntos de copias: cuántas iguales del mismo nivel hay en el equipo. */
+.copias {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+  min-height: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.copias i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted);
+}
+
+.copias i.lleno {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Copia que vuela hasta la unidad fusionada (la crea anim/shopFx.ts). */
+.copia-fusion {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  margin: 0;
 }
