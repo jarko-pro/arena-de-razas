@@ -25,6 +25,8 @@ export type Trigger =
   | 'onAnyDeath'
   | 'onBuy'
   | 'onSell'
+  /** Al subir de nivel apilando copias en la tienda. De momento ninguna unidad lo usa. */
+  | 'onLevelUp'
 
 /** Disparadores que se resuelven dentro de un combate. */
 export const COMBAT_TRIGGERS: readonly Trigger[] = [

@@ -35,7 +35,8 @@ interface BattleScreenProps {
   readonly playerTeam: readonly TeamUnit[]
   readonly rivalTeam: readonly TeamUnit[]
   readonly seed: string
-  readonly onBack: () => void
+  /** Vuelve a la tienda con el resultado del combate. */
+  readonly onBack: (outcome: Outcome) => void
 }
 
 export function BattleScreen({ round, playerTeam, rivalTeam, seed, onBack }: BattleScreenProps) {
@@ -123,7 +124,7 @@ export function BattleScreen({ round, playerTeam, rivalTeam, seed, onBack }: Bat
         <button
           type="button"
           className={outcome === null ? 'btn' : 'btn primary'}
-          onClick={onBack}
+          onClick={() => onBack(result.outcome)}
           disabled={playing}
         >
           Ir a la ronda {round + 1}

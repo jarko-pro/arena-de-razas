@@ -82,7 +82,7 @@ describe('Razas de la tienda', () => {
   })
 
   it('sin razas la tienda sale vacía', () => {
-    expect(createShop(1, [], 'x', []).offers).toHaveLength(0)
+    expect(createShop(1, [], 'x', []).offers.every((offer) => offer === null)).toBe(true)
   })
 })
 
@@ -101,7 +101,7 @@ describe('Oro', () => {
   it('vender devuelve 1 de oro por nivel', () => {
     const base = shopWith([], ['grunt'])
     expect(expectOk(sell(base, 0)).gold).toBe(GOLD_PER_ROUND + 1)
-    const levelTwo = { ...base, team: [{ id: 1, defId: 'grunt' as const, level: 2 as const }] }
+    const levelTwo = { ...base, team: [{ id: 1, defId: 'grunt' as const, level: 2 as const, copies: 3 }] }
     expect(expectOk(sell(levelTwo, 0)).gold).toBe(GOLD_PER_ROUND + 2)
     expect(expectOk(sell(levelTwo, 0)).team).toHaveLength(0)
   })

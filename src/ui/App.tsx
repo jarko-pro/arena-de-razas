@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { TeamUnit } from '../engine/combat'
-import { battleTeam, createShop, type ShopState } from '../engine/shop'
+import { NO_STREAK, streakGold, updateStreak, type Streak } from '../engine/game'
+import { battleTeam, createShop, nextShop, type ShopState } from '../engine/shop'
 import { RACES } from '../engine/units'
 import { BattleScreen } from './BattleScreen'
 import { ShopScreen } from './ShopScreen'
@@ -10,10 +11,11 @@ import { testRival } from './testRivals'
 /** Pantallas de la versión actual. El hito 5 sustituye esto por el bucle de partida. */
 type Screen =
   | { readonly kind: 'start' }
-  | { readonly kind: 'shop'; readonly shop: ShopState }
+  | { readonly kind: 'shop'; readonly shop: ShopState; readonly streak: Streak }
   | {
       readonly kind: 'battle'
       readonly shop: ShopState
+      readonly streak: Streak
       readonly playerTeam: readonly TeamUnit[]
       readonly rivalTeam: readonly TeamUnit[]
     }
@@ -30,7 +32,13 @@ export function App() {
     case 'start':
       return (
         <StartScreen
-          onPlay={() => setScreen({ kind: 'shop', shop: createShop(1, [], newSeed(), RACES) })}
+          onPlay={() =>
+            setScreen({
+              kind: 'shop',
+              shop: createShop(1, [], newSeed(), RACES),
+              streak: NO_STREAK,
+            })
+          }
         />
       )
 
@@ -38,11 +46,12 @@ export function App() {
       return (
         <ShopScreen
           state={screen.shop}
-          onChange={(shop) => setScreen({ kind: 'shop', shop })}
+          streak={screen.streak}
+          onChange={(shop) => setScreen({ ...screen, shop })}
           onFight={() =>
             setScreen({
+              ...screen,
               kind: 'battle',
-              shop: screen.shop,
               playerTeam: battleTeam(screen.shop),
               rivalTeam: testRival(screen.shop.round),
             })
@@ -58,12 +67,10 @@ export function App() {
           playerTeam={screen.playerTeam}
           rivalTeam={screen.rivalTeam}
           seed={`${shop.seed}:combate:${shop.round}`}
-          onBack={() =>
-            setScreen({
-              kind: 'shop',
-              shop: createShop(shop.round + 1, battleTeam(shop), shop.seed, shop.races),
-            })
-          }
+          onBack={(outcome) => {
+            const streak = updateStreak(screen.streak, outcome)
+            setScreen({ kind: 'shop', shop: nextShop(shop, streakGold(streak.count)), streak })
+          }}
         />
       )
     }

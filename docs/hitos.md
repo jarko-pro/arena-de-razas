@@ -49,23 +49,28 @@ Estimación con Claude Code: 20‑32 h en total.
 
 **Terminado cuando**
 - El oro se descuenta y se devuelve correctamente (con pruebas).
-- No se puede comprar sin oro ni con el equipo lleno (salvo fusión).
+- No se puede comprar sin oro ni con el equipo lleno (salvo apilando encima de una unidad igual).
 - Los huecos y tiers de la tienda cambian según la ronda.
 - Funciona con ratón y con el dedo en móvil.
 
 ---
 
-## Hito 4 – Fusiones y niveles (≈1‑2 h)
+## Hito 4 – Niveles por apilamiento, congelar y rachas (≈2‑3 h)
 
 **Tareas**
-- Fusión automática al juntar 3 copias, de nivel 1 a 2 y de 2 a 3.
+- Apilar copias en el mismo hueco: comprar encima de una unidad igual o juntar dos del equipo. Nivel 2 con 3 copias y nivel 3 con 6.
 - Estadísticas y `n` según nivel.
-- Indicador visual de nivel y de cuántas copias faltan para fusionar.
-- Animación de fusión.
+- Disparador "Al subir de nivel" en el motor.
+- Indicador de nivel y de experiencia (copias) en cada unidad; resaltar dónde se puede apilar al arrastrar.
+- Animación al subir de nivel (destello y escala).
+- Congelar y descongelar unidades de la tienda.
+- Oro extra por rachas de victorias o derrotas, con indicador de racha y desglose del oro.
 
 **Terminado cuando**
-- Pruebas para: fusión con equipo lleno, posición de la unidad fusionada, nivel 3 como máximo, escalado de fichas invocadas.
-- La fusión se ve y se entiende en pantalla.
+- Pruebas para: comprar encima con el equipo lleno, 3 copias dan nivel 2 y 6 dan nivel 3, no se pasa de nivel 3 (ni comprando ni juntando), juntar dos unidades libera un hueco, se conservan los bonus permanentes, escalado de fichas invocadas.
+- Pruebas para congelar: el reroll y el cambio de ronda mantienen las congeladas; comprar una congelada libera el hueco.
+- Pruebas para rachas: tabla de oro extra para rachas de 1 a 6; el empate y el cambio de victoria a derrota reinician la racha.
+- Apilar, congelar y la racha se ven y se entienden en pantalla.
 
 ---
 
@@ -90,7 +95,7 @@ Estimación con Claude Code: 20‑32 h en total.
 ## Hito 6 – Rivales generados por bot (≈1‑2 h)
 
 **Tareas**
-- `bot.ts`: el bot juega la tienda con las mismas reglas según `docs/diseno.md`.
+- `bot.ts`: el bot juega la tienda con las mismas reglas según `docs/diseno.md`, incluidos apilar, congelar y oro por rachas.
 - El rival de cada ronda es el equipo del bot en esa ronda.
 - Mostrar en la pantalla de combate el nombre del rival y su raza preferida.
 

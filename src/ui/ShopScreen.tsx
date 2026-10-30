@@ -1,19 +1,22 @@
 import { useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { captureCards, playFusion, type CardShot } from '../anim/shopFx'
+import { captureCards, playStack, type CardShot } from '../anim/shopFx'
 import { MAX_TEAM_SIZE, teamUnitStats, type TeamUnit } from '../engine/combat'
+import type { Streak } from '../engine/game'
 import {
-  COPIES_TO_FUSE,
-  MAX_LEVEL,
+  MAX_COPIES,
   REROLL_COST,
   SHOP_ERROR_TEXT,
   UNIT_COST,
   buy,
-  copiesOf,
+  buyPlacement,
+  levelProgress,
+  merge,
   move,
   reroll,
   sell,
   tierForRound,
-  wouldFuse,
+  toggleFreeze,
+  type OwnedUnit,
   type ShopEvent,
   type ShopResult,
   type ShopState,
@@ -24,6 +27,7 @@ import './shop.css'
 
 interface ShopScreenProps {
   readonly state: ShopState
+  readonly streak: Streak
   readonly onChange: (state: ShopState) => void
   readonly onFight: () => void
 }
@@ -70,6 +74,13 @@ function dropTargetAt(x: number, y: number): DropTarget | null {
   return Number.isInteger(index) ? { kind: 'team', index } : null
 }
 
+function streakText(streak: Streak, gold: number): string {
+  if (streak.kind === 'none' || streak.count === 0) return 'Sin racha'
+  const what = streak.kind === 'win' ? 'victoria' : 'derrota'
+  const label = `Racha de ${streak.count} ${what}${streak.count === 1 ? '' : 's'}`
+  return gold > 0 ? `${label} · +${gold} de oro` : label
+}
+
 function eventText(state: ShopState, event: ShopEvent): string | null {
   const name = (id: number): string => {
     const unit = state.team.find((u) => u.id === id)
@@ -85,7 +96,9 @@ function eventText(state: ShopState, event: ShopEvent): string | null {
       ].filter((part) => part !== '')
       return `${parts.join(' ')} a ${name(event.unitId)}`
     }
-    case 'fusion':
+    case 'stack':
+      return `${name(event.unitId)}: ${event.copies} de ${MAX_COPIES} copias`
+    case 'levelUp':
       return `¡${name(event.unitId)} sube a nivel ${event.level}!`
     case 'gold':
       return null
@@ -96,10 +109,9 @@ interface CardProps {
   readonly unit: TeamUnit
   /** Id de la unidad, para encontrar su carta al animar. */
   readonly unitId?: number
-  /** Copias iguales en el equipo (solo cartas del equipo), para los puntos de fusión. */
-  readonly copies?: number
-  /** La oferta completaría una fusión. */
-  readonly fuses?: boolean
+  /** Unidad del equipo: muestra los puntos de experiencia. */
+  readonly owned?: OwnedUnit
+  readonly frozen?: boolean
   readonly selected?: boolean
   readonly dragging?: boolean
   readonly onPointerDown?: (event: ReactPointerEvent<HTMLDivElement>) => void
@@ -110,11 +122,37 @@ interface CardProps {
   readonly onPointerLeave?: () => void
 }
 
-function ShopCard({ unit, unitId, copies, fuses, selected, dragging, ...handlers }: CardProps) {
+function XpPips({ unit }: { readonly unit: OwnedUnit }) {
+  const progress = levelProgress(unit)
+  if (!progress) {
+    return (
+      <span className="copias" aria-label="Nivel máximo">
+        máx
+      </span>
+    )
+  }
+  return (
+    <span
+      className="copias"
+      aria-label={`${progress.have} de ${progress.need} copias para el nivel ${unit.level + 1}`}
+    >
+      {Array.from({ length: progress.need }, (_, i) => (
+        <i key={i} className={i < progress.have ? 'lleno' : ''} />
+      ))}
+    </span>
+  )
+}
+
+function ShopCard({ unit, unitId, owned, frozen, selected, dragging, ...handlers }: CardProps) {
   const def = UNITS[unit.defId]
   const level = unit.level ?? 1
   const stats = teamUnitStats(unit)
-  const classes = ['carta', selected === true ? 'sel' : '', dragging === true ? 'arrastrando' : '']
+  const classes = [
+    'carta',
+    selected === true ? 'sel' : '',
+    dragging === true ? 'arrastrando' : '',
+    frozen === true ? 'congelada' : '',
+  ]
   return (
     <div
       className={classes.filter((c) => c !== '').join(' ')}
@@ -125,30 +163,16 @@ function ShopCard({ unit, unitId, copies, fuses, selected, dragging, ...handlers
       <div className={`body r-${def.race}`}>
         <span className="mono">{short(def.name)}</span>
         <span className={`nivel nivel-${level}`}>Nv {level}</span>
-        {fuses === true && <span className="etiqueta-fusion">¡Fusión!</span>}
         <span className="st atk">{stats.atk}</span>
         <span className="st hp">{stats.hp}</span>
       </div>
       <span className="nm">{def.name}</span>
-      {copies !== undefined && (
-        <span
-          className="copias"
-          aria-label={
-            level >= MAX_LEVEL ? 'Nivel máximo' : `${copies} de ${COPIES_TO_FUSE} para subir de nivel`
-          }
-        >
-          {level >= MAX_LEVEL
-            ? 'máx'
-            : Array.from({ length: COPIES_TO_FUSE }, (_, i) => (
-                <i key={i} className={i < copies ? 'lleno' : ''} />
-              ))}
-        </span>
-      )}
+      {owned && <XpPips unit={owned} />}
     </div>
   )
 }
 
-export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
+export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps) {
   const [selected, setSelected] = useState<Pick | null>(null)
   const [hovered, setHovered] = useState<Pick | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -156,15 +180,17 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
   const dragRef = useRef<Drag | null>(null)
   const lastTapRef = useRef<{ pick: Pick; time: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
-  const fusionRef = useRef<{ shots: CardShot[]; targetId: number } | null>(null)
+  const stackRef = useRef<{ shots: CardShot[]; targetId: number; levelUp: boolean } | null>(
+    null,
+  )
 
-  // Tras pintar el equipo fusionado, las copias vuelan hasta la unidad resultante.
+  // Tras pintar el equipo, la copia apilada vuela hasta su unidad.
   useLayoutEffect(() => {
-    const pending = fusionRef.current
+    const pending = stackRef.current
     const root = rootRef.current
     if (!pending || !root) return
-    fusionRef.current = null
-    playFusion(root, pending.shots, pending.targetId)
+    stackRef.current = null
+    playStack(root, pending.shots, pending.targetId, pending.levelUp)
   }, [state])
 
   const offerIndex = (id: number): number => state.offers.findIndex((o) => o?.id === id)
@@ -180,16 +206,13 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
       setMessage(SHOP_ERROR_TEXT[result.error])
       return
     }
-    const fusions = result.events.filter((event) => event.type === 'fusion')
-    const last = fusions.at(-1)
-    if (last && rootRef.current) {
-      // Las cartas que desaparecen se fotografían ahora, antes del nuevo render.
-      const vanishing = fusions
-        .flatMap((fusion) => [...fusion.consumedIds, fusion.unitId])
-        .filter((id) => id !== last.unitId)
-      fusionRef.current = {
-        shots: captureCards(rootRef.current, [...new Set(vanishing)]),
-        targetId: last.unitId,
+    const stack = result.events.find((event) => event.type === 'stack')
+    if (stack && rootRef.current) {
+      // La copia que desaparece se fotografía ahora, antes del nuevo render.
+      stackRef.current = {
+        shots: captureCards(rootRef.current, [stack.sourceId]),
+        targetId: stack.unitId,
+        levelUp: result.events.some((event) => event.type === 'levelUp'),
       }
     }
     const texts = result.events
@@ -214,8 +237,33 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
       if (target.kind === 'team') buyOffer(pick.id, target.index)
       return
     }
-    if (target.kind === 'sell') sellUnit(pick.id)
-    else apply(move(state, teamIndex(pick.id), target.index))
+    if (target.kind === 'sell') {
+      sellUnit(pick.id)
+      return
+    }
+    const from = teamIndex(pick.id)
+    const source = state.team[from]
+    const other = state.team[target.index]
+    // Sobre una unidad igual se juntan; si no, se reordena.
+    if (source && other && other.id !== source.id && other.defId === source.defId) {
+      apply(merge(state, from, target.index))
+    } else {
+      apply(move(state, from, target.index))
+    }
+  }
+
+  /** Huecos del equipo donde se puede apilar lo que se arrastra o está seleccionado. */
+  const stackTargets = (pick: Pick | null): Set<number> => {
+    const targets = new Set<number>()
+    if (!pick) return targets
+    const unit = unitOf(pick)
+    if (!unit) return targets
+    const copies = pick.kind === 'team' ? (state.team[teamIndex(pick.id)]?.copies ?? 1) : 1
+    state.team.forEach((member, index) => {
+      if (pick.kind === 'team' && member.id === pick.id) return
+      if (member.defId === unit.defId && member.copies + copies <= MAX_COPIES) targets.add(index)
+    })
+    return targets
   }
 
   const tap = (pick: Pick, now: number): void => {
@@ -282,7 +330,7 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
 
   const shown = (ghost === null ? hovered : null) ?? selected
   const shownUnit = shown ? unitOf(shown) : undefined
-  const teamFull = state.team.length >= MAX_TEAM_SIZE
+  const highlighted = stackTargets(ghost?.pick ?? selected)
   const draggingTeamUnit = ghost?.pick.kind === 'team'
 
   return (
@@ -298,17 +346,39 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
         </div>
       </header>
 
+      <div className="racha">
+        <span className={`racha-estado racha-${streak.kind}`}>
+          {streakText(streak, state.startGold.streak)}
+        </span>
+        <span className="desglose">
+          Oro de la ronda: {state.startGold.base} base
+          {state.startGold.streak > 0 && ` + ${state.startGold.streak} de racha`}
+        </span>
+      </div>
+
       <section className="zona">
         <h2>A la venta</h2>
         <div className="fila">
           {state.offers.map((offer, slot) => (
             <div className="hueco" key={offer?.id ?? `vacio-${slot}`}>
               {offer && (
-                <ShopCard
-                  unit={offer}
-                  fuses={wouldFuse(state, slot)}
-                  {...handlersFor({ kind: 'offer', id: offer.id }, offer)}
-                />
+                <>
+                  <ShopCard
+                    unit={offer}
+                    frozen={offer.frozen === true}
+                    {...handlersFor({ kind: 'offer', id: offer.id }, offer)}
+                  />
+                  <button
+                    type="button"
+                    className={offer.frozen === true ? 'candado activo' : 'candado'}
+                    aria-pressed={offer.frozen === true}
+                    aria-label={offer.frozen === true ? 'Descongelar' : 'Congelar'}
+                    title={offer.frozen === true ? 'Descongelar' : 'Congelar'}
+                    onClick={() => apply(toggleFreeze(state, slot))}
+                  >
+                    {offer.frozen === true ? '🔒' : '🔓'}
+                  </button>
+                </>
               )}
             </div>
           ))}
@@ -345,9 +415,10 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
             const index = MAX_TEAM_SIZE - 1 - column
             const unit = state.team[index]
             const over = ghost?.over?.kind === 'team' && ghost.over.index === index
+            const classes = ['hueco', over ? 'destino' : '', highlighted.has(index) ? 'apilable' : '']
             return (
               <div
-                className={over ? 'hueco destino' : 'hueco'}
+                className={classes.filter((c) => c !== '').join(' ')}
                 key={unit?.id ?? `vacio-${index}`}
                 data-drop="team"
                 data-index={index}
@@ -355,7 +426,7 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
                 {unit && (
                   <ShopCard
                     unit={unit}
-                    copies={copiesOf(state.team, unit.defId, unit.level ?? 1)}
+                    owned={unit}
                     {...handlersFor({ kind: 'team', id: unit.id }, unit)}
                   />
                 )}
@@ -383,13 +454,10 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
         {shown && shownUnit ? (
           <Detail
             unit={shownUnit}
-            source={shown.kind}
+            owned={shown.kind === 'team' ? state.team.find((u) => u.id === shown.id) : undefined}
             gold={state.gold}
-            copies={copiesOf(state.team, shownUnit.defId, shownUnit.level ?? 1)}
-            canPlace={
-              !teamFull ||
-              (shown.kind === 'offer' &&
-                wouldFuse(state, state.offers.findIndex((o) => o?.id === shown.id)))
+            placement={
+              shown.kind === 'offer' ? buyPlacement(state, offerIndex(shown.id)).kind : null
             }
             onBuy={() => buyOffer(shown.id)}
             onSell={() => sellUnit(shown.id)}
@@ -397,7 +465,8 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
         ) : (
           <p className="ayuda">
             Pulsa una unidad para ver su habilidad. Doble clic o doble toque para comprar, o
-            arrástrala a tu equipo. Arrastra tus unidades para reordenarlas o venderlas.
+            arrástrala a tu equipo; suéltala sobre una igual para apilarla. Arrastra tus unidades
+            para reordenarlas, juntarlas o venderlas. El candado congela una oferta.
           </p>
         )}
       </section>
@@ -413,32 +482,38 @@ export function ShopScreen({ state, onChange, onFight }: ShopScreenProps) {
 
 interface DetailProps {
   readonly unit: TeamUnit
-  readonly source: Pick['kind']
+  /** Presente si la unidad es del equipo. */
+  readonly owned?: OwnedUnit
   readonly gold: number
-  /** Copias iguales (misma unidad y nivel) que ya hay en el equipo. */
-  readonly copies: number
-  /** Hay sitio en el equipo o la compra forma una fusión. */
-  readonly canPlace: boolean
+  /** Para ofertas: dónde acabaría al comprarla con doble clic. */
+  readonly placement: 'stack' | 'insert' | 'blocked' | null
   readonly onBuy: () => void
   readonly onSell: () => void
 }
 
-function fusionHint(source: Pick['kind'], level: number, copies: number): string {
-  if (level >= MAX_LEVEL) return 'Nivel máximo.'
-  if (source === 'offer') {
-    return copies >= COPIES_TO_FUSE - 1
-      ? `Comprarla fusiona tus ${copies} copias en una de nivel ${level + 1}.`
-      : `Tienes ${copies} de ${COPIES_TO_FUSE} copias para subir a nivel ${level + 1}.`
-  }
-  return `Tienes ${copies} de ${COPIES_TO_FUSE} copias de nivel ${level} para subir a nivel ${level + 1}.`
+function xpHint(owned: OwnedUnit): string {
+  const progress = levelProgress(owned)
+  if (!progress) return `Nivel máximo · ${owned.copies} copias.`
+  const missing = progress.need - progress.have
+  return `${owned.copies} ${owned.copies === 1 ? 'copia' : 'copias'} · ${
+    missing === 1 ? 'falta 1' : `faltan ${missing}`
+  } para el nivel ${owned.level + 1}.`
 }
 
-function Detail({ unit, source, gold, copies, canPlace, onBuy, onSell }: DetailProps) {
+function Detail({ unit, owned, gold, placement, onBuy, onSell }: DetailProps) {
   const def = UNITS[unit.defId]
   const level = unit.level ?? 1
   const stats = teamUnitStats(unit)
   const text = abilityText(def, level)
   const bonus = (unit.atkBonus ?? 0) !== 0 || (unit.hpBonus ?? 0) !== 0
+  const buyLabel =
+    placement === 'blocked'
+      ? 'Equipo lleno'
+      : gold < UNIT_COST
+        ? 'Sin oro'
+        : placement === 'stack'
+          ? `Apilar (${UNIT_COST} oro)`
+          : `Comprar (${UNIT_COST} oro)`
 
   return (
     <div className="detalle-unidad">
@@ -453,19 +528,22 @@ function Detail({ unit, source, gold, copies, canPlace, onBuy, onSell }: DetailP
         {bonus && <span> (incluye mejoras permanentes)</span>}
       </p>
       <p className="detalle-habilidad">{text === '' ? 'Sin habilidad.' : text}</p>
-      <p className="detalle-fusion">{fusionHint(source, level, copies)}</p>
-      {source === 'offer' ? (
+      {owned && <p className="detalle-fusion">{xpHint(owned)}</p>}
+      {placement === 'stack' && (
+        <p className="detalle-fusion">Se apilará sobre la unidad igual de tu equipo.</p>
+      )}
+      {owned ? (
+        <button type="button" className="btn" onClick={onSell}>
+          Vender (+{level} oro)
+        </button>
+      ) : (
         <button
           type="button"
           className="btn primary"
           onClick={onBuy}
-          disabled={gold < UNIT_COST || !canPlace}
+          disabled={gold < UNIT_COST || placement === 'blocked'}
         >
-          {!canPlace ? 'Equipo lleno' : gold < UNIT_COST ? 'Sin oro' : `Comprar (${UNIT_COST} oro)`}
-        </button>
-      ) : (
-        <button type="button" className="btn" onClick={onSell}>
-          Vender (+{level} oro)
+          {buyLabel}
         </button>
       )}
     </div>

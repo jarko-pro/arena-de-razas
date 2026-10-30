@@ -25,7 +25,7 @@ Se gana la partida al conseguir **10 victorias**. Se pierde al quedarse **sin vi
 
 | Parámetro | Valor |
 | --- | --- |
-| Oro por ronda | 10 (no se acumula entre rondas) |
+| Oro por ronda | 10 base + oro extra por racha (no se acumula entre rondas) |
 | Coste de una unidad | 3 |
 | Coste de reroll | 1 |
 | Venta | Devuelve 1 de oro por nivel de la unidad |
@@ -40,21 +40,45 @@ Se gana la partida al conseguir **10 victorias**. Se pierde al quedarse **sin vi
 | 3 | Ronda 5 |
 
 **Acciones en la tienda**:
-- Comprar una unidad de la tienda (si hay hueco en el equipo o si forma una fusión).
+- Comprar una unidad de la tienda: en un hueco libre del equipo, o encima de una unidad igual para apilarla (esto último aunque el equipo esté lleno).
 - Vender una unidad del equipo.
-- Reroll: sustituir todas las unidades de la tienda.
-- Reordenar el equipo arrastrando unidades.
+- Reroll: sustituir todas las unidades de la tienda que no estén congeladas.
+- Congelar o descongelar una unidad de la tienda (gratis).
+- Reordenar el equipo arrastrando unidades, o juntar dos unidades iguales.
 - Terminar la tienda y pasar al combate.
 
-## Fusiones y niveles
+**Congelar**:
+- Cada unidad de la tienda se puede congelar o descongelar gratis.
+- Las unidades congeladas **no se sustituyen** al hacer reroll ni al empezar la ronda siguiente; siguen en su hueco.
+- Si en la ronda siguiente la tienda tiene más huecos, los nuevos se rellenan normalmente.
+- Al comprar una unidad congelada, el hueco queda libre y deja de estar congelado.
+- Una unidad congelada se conserva aunque su tier sea superior al de la ronda.
 
-- **3 copias** de la misma unidad de nivel 1 se fusionan automáticamente en **1 unidad de nivel 2**.
-- **3 unidades de nivel 2** iguales se fusionan en **1 de nivel 3** (nivel máximo).
-- Al comprar la tercera copia, la fusión ocurre aunque el equipo esté lleno.
-- La unidad fusionada ocupa la posición de la copia más adelantada.
-- Las fusiones se encadenan: si al fusionar se juntan 3 unidades de nivel 2, se fusionan también en una de nivel 3.
-- La unidad fusionada conserva la **suma** de las mejoras permanentes de las 3 copias.
-- Si la compra provoca una fusión, primero se fusiona y después la unidad fusionada dispara "Al comprar" con el valor de su nuevo nivel.
+**Oro extra por rachas**:
+- Se lleva la cuenta de la **racha actual**: victorias seguidas o derrotas seguidas.
+- Al empezar cada tienda se suma un oro extra según la racha con la que se llega:
+
+| Racha (victorias o derrotas seguidas) | Oro extra |
+| --- | --- |
+| 0‑1 | 0 |
+| 2 | +1 |
+| 3‑4 | +2 |
+| 5 o más | +3 |
+
+- Las rachas de victorias y de derrotas dan el mismo oro.
+- Un empate rompe la racha (vuelve a 0). Una victoria rompe la racha de derrotas y viceversa.
+- La primera ronda no tiene racha.
+
+## Niveles por apilamiento
+
+- Las copias de una misma unidad **se apilan en un único hueco**, sumando experiencia.
+- Cada unidad empieza en nivel 1 con 1 copia.
+- **Nivel 2** al llegar a **3 copias** en total; **nivel 3** al llegar a **6 copias** en total. El nivel 3 es el máximo: no se pueden apilar más copias.
+- **Comprar encima**: soltar una unidad de la tienda sobre una unidad igual del equipo suma 1 copia. Está permitido aunque el equipo tenga los 5 huecos llenos.
+- **Comprar en hueco libre**: la unidad ocupa ese hueco como unidad independiente.
+- **Juntar dos del equipo**: arrastrar una unidad del equipo sobre otra igual suma sus copias en el hueco de destino y libera el otro. Si la suma pasa de 6 copias, la acción no se permite.
+- Los cambios permanentes se **conservan** al apilar. Si se juntan dos unidades del equipo, se queda el mayor de los dos bonus de ATK y el mayor de los dos bonus de PV.
+- Al comprar apilando, primero se apila; si sube de nivel se dispara "Al subir de nivel" y después "Al comprar", con el valor del nivel resultante.
 
 | Nivel | Estadísticas | Valor de la habilidad (`n`) |
 | --- | --- | --- |
@@ -93,8 +117,9 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 | Al morir | Cuando muere |
 | Cuando muere un aliado | Cuando muere otra unidad de su equipo |
 | Cuando muere cualquier unidad | Cuando muere cualquier otra unidad |
-| Al comprar | Al comprarla en la tienda |
+| Al comprar | Al comprarla en la tienda (también apilando) |
 | Al vender | Al venderla en la tienda |
+| Al subir de nivel | Cuando sube de nivel al apilar copias (de momento ninguna unidad lo usa) |
 
 ## Unidades
 
@@ -149,7 +174,8 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 ## Rivales (versión 1)
 
 - Los rivales los genera un **bot** que juega la tienda con las mismas reglas, el mismo oro y las mismas rondas que el jugador.
-- Estrategia del bot: elige una raza preferida al azar, prioriza comprar unidades de esa raza y fusiones, y hace reroll si no encuentra nada útil.
+- Estrategia del bot: elige una raza preferida al azar, prioriza comprar unidades de esa raza y apilar copias, y hace reroll si no encuentra nada útil.
+- El bot usa las mismas reglas que el jugador: apilar, congelar y oro por rachas.
 - El equipo rival de la ronda N es el que tendría un bot en la ronda N.
 
 ## Ideas de recompensa (pendiente de probar, no implementar todavía)

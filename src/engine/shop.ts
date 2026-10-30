@@ -1,4 +1,4 @@
-// Tienda: oro, compra, venta, reroll, reordenar el equipo y fusiones.
+// Tienda: oro, compra, venta, reroll, congelar, reordenar y apilar copias.
 
 import { fireShopTrigger, type ShopBuff } from './abilities'
 import { MAX_TEAM_SIZE, type TeamUnit } from './combat'
@@ -9,24 +9,33 @@ import { PLAYABLE_UNITS, type Level, type Race, type Tier, type UnitId } from '.
 export const GOLD_PER_ROUND = 10
 export const UNIT_COST = 3
 export const REROLL_COST = 1
-/** Copias iguales que se fusionan en una de nivel superior. */
-export const COPIES_TO_FUSE = 3
 export const MAX_LEVEL: Level = 3
 
-/** Unidad del equipo con un id estable para la interfaz. */
+/** Copias totales apiladas con las que se alcanza cada nivel. */
+export const COPIES_FOR_LEVEL: Record<Level, number> = { 1: 1, 2: 3, 3: 6 }
+export const MAX_COPIES = COPIES_FOR_LEVEL[MAX_LEVEL]
+
+/** Unidad del equipo con un id estable para la interfaz y sus copias apiladas. */
 export interface OwnedUnit extends TeamUnit {
   readonly id: number
+  readonly level: Level
+  /** Copias apiladas en este hueco (experiencia): de 1 a 6. */
+  readonly copies: number
 }
 
 /** Unidad a la venta en un hueco de la tienda. */
 export interface ShopOffer {
   readonly id: number
   readonly defId: UnitId
+  /** Las congeladas no se sustituyen al hacer reroll ni al cambiar de ronda. */
+  readonly frozen?: boolean
 }
 
 export interface ShopState {
   readonly round: number
   readonly gold: number
+  /** Desglose del oro con el que empezó la tienda. */
+  readonly startGold: { readonly base: number; readonly streak: number }
   /** Huecos de la tienda; null si ya se ha comprado lo que había. */
   readonly offers: readonly (ShopOffer | null)[]
   /** Equipo de delante a atrás. */
@@ -39,7 +48,13 @@ export interface ShopState {
   readonly nextId: number
 }
 
-export type ShopError = 'noOffer' | 'notEnoughGold' | 'teamFull' | 'noUnit'
+export type ShopError =
+  | 'noOffer'
+  | 'notEnoughGold'
+  | 'teamFull'
+  | 'noUnit'
+  | 'maxLevel'
+  | 'notSameUnit'
 
 /** Lo que ha pasado en una acción, para que la interfaz lo muestre. */
 export type ShopEvent =
@@ -47,13 +62,14 @@ export type ShopEvent =
   | { readonly type: 'buff'; readonly unitId: number; readonly atk: number; readonly hp: number }
   | { readonly type: 'gold'; readonly amount: number }
   | {
-      readonly type: 'fusion'
-      /** Unidad resultante: conserva el id de la copia más adelantada. */
+      readonly type: 'stack'
+      /** Unidad que recibe las copias. */
       readonly unitId: number
-      /** Copias que desaparecen al fusionarse. */
-      readonly consumedIds: readonly number[]
-      readonly level: Level
+      /** Oferta comprada o unidad del equipo que se suma y desaparece. */
+      readonly sourceId: number
+      readonly copies: number
     }
+  | { readonly type: 'levelUp'; readonly unitId: number; readonly level: Level }
 
 export type ShopResult =
   | { readonly ok: true; readonly state: ShopState; readonly events: readonly ShopEvent[] }
@@ -64,6 +80,8 @@ export const SHOP_ERROR_TEXT: Record<ShopError, string> = {
   notEnoughGold: 'No tienes oro suficiente.',
   teamFull: 'Tu equipo está lleno.',
   noUnit: 'No hay ninguna unidad en esa posición.',
+  maxLevel: 'Esa unidad no puede pasar del nivel 3.',
+  notSameUnit: 'Solo se pueden juntar unidades iguales.',
 }
 
 /** Huecos de la tienda: 3 (rondas 1‑2), 4 (rondas 3‑4), 5 (ronda 5 en adelante). */
@@ -88,44 +106,89 @@ export function shopPool(round: number, races: readonly Race[]): readonly UnitId
   )
 }
 
+/** Nivel que dan esas copias apiladas: 3 → nivel 2, 6 → nivel 3. */
+export function levelForCopies(copies: number): Level {
+  if (copies >= COPIES_FOR_LEVEL[3]) return 3
+  if (copies >= COPIES_FOR_LEVEL[2]) return 2
+  return 1
+}
+
+/** Progreso hacia el siguiente nivel, para los puntos de experiencia. */
+export function levelProgress(unit: OwnedUnit): { have: number; need: number } | null {
+  if (unit.level >= MAX_LEVEL) return null
+  const from = COPIES_FOR_LEVEL[unit.level]
+  const to = COPIES_FOR_LEVEL[(unit.level + 1) as Level]
+  // Nivel 1: 1-3 copias de 3; nivel 2: 0-2 copias más de 3.
+  return unit.level === 1 ? { have: unit.copies, need: to } : { have: unit.copies - from, need: to - from }
+}
+
 /** Siguiente generador de la ronda: misma semilla y mismas acciones = mismos resultados. */
 function nextRng(state: ShopState): { rng: Rng; state: ShopState } {
   const rng = createRng(`${state.seed}:${state.round}:${state.rolls}`)
   return { rng, state: { ...state, rolls: state.rolls + 1 } }
 }
 
+/** Rellena los huecos de la ronda; las ofertas congeladas se quedan donde están. */
 function rollOffers(state: ShopState): ShopState {
   const { rng, state: next } = nextRng(state)
   const pool = shopPool(next.round, next.races)
   let nextId = next.nextId
-  const offers: ShopOffer[] = []
-  for (let i = 0; i < slotsForRound(next.round); i++) {
+  const slots = Math.max(slotsForRound(next.round), next.offers.length)
+  const offers: (ShopOffer | null)[] = []
+  for (let i = 0; i < slots; i++) {
+    const current = next.offers[i]
+    if (current?.frozen === true) {
+      offers.push(current)
+      continue
+    }
     const defId = rng.pick(pool)
-    if (defId !== undefined) offers.push({ id: nextId++, defId })
+    offers.push(defId === undefined ? null : { id: nextId++, defId })
   }
   return { ...next, offers, nextId }
 }
 
+function toOwned(unit: TeamUnit, id: number): OwnedUnit {
+  const level = unit.level ?? 1
+  return { ...unit, id, level, copies: COPIES_FOR_LEVEL[level] }
+}
+
 /**
- * Tienda al empezar una ronda: oro completo (no se acumula) y unidades nuevas
- * de las razas indicadas.
+ * Tienda de la primera ronda: oro completo y unidades de las razas indicadas.
+ * `streakGold` es el oro extra por racha (0 si no hay).
  */
 export function createShop(
   round: number,
   team: readonly TeamUnit[],
   seed: string,
   races: readonly Race[],
+  streakGold = 0,
 ): ShopState {
-  const owned = team.map((unit, i) => ({ ...unit, id: i + 1 }))
+  const owned = team.map((unit, i) => toOwned(unit, i + 1))
   return rollOffers({
     round,
-    gold: GOLD_PER_ROUND,
+    gold: GOLD_PER_ROUND + streakGold,
+    startGold: { base: GOLD_PER_ROUND, streak: streakGold },
     offers: [],
     team: owned,
     seed,
     races: [...races],
     rolls: 0,
     nextId: owned.length + 1,
+  })
+}
+
+/**
+ * Tienda de la ronda siguiente: mismo equipo, oro nuevo (no se acumula) y
+ * las ofertas congeladas en su hueco.
+ */
+export function nextShop(previous: ShopState, streakGold = 0): ShopState {
+  return rollOffers({
+    ...previous,
+    round: previous.round + 1,
+    gold: GOLD_PER_ROUND + streakGold,
+    startGold: { base: GOLD_PER_ROUND, streak: streakGold },
+    offers: previous.offers.map((offer) => (offer?.frozen === true ? offer : null)),
+    rolls: 0,
   })
 }
 
@@ -148,99 +211,154 @@ function shopTriggerEvents(
   return events
 }
 
-export interface Fusion {
-  readonly unitId: number
-  readonly consumedIds: readonly number[]
-  readonly level: Level
-}
-
-/** Copias de esa unidad y ese nivel que hay en el equipo. */
-export function copiesOf(team: readonly TeamUnit[], defId: UnitId, level: Level): number {
-  return team.filter((unit) => unit.defId === defId && (unit.level ?? 1) === level).length
+/** Suma copias a una unidad del equipo y recalcula su nivel. */
+function addCopies(unit: OwnedUnit, copies: number): OwnedUnit {
+  const total = unit.copies + copies
+  return { ...unit, copies: total, level: levelForCopies(total) }
 }
 
 /**
- * Fusiona cada grupo de 3 copias iguales del mismo nivel en una de nivel
- * superior, en la posición de la más adelantada y con la suma de sus mejoras.
- * Repite hasta que no quede ningún grupo, así que las fusiones se encadenan.
+ * Dispara "Al subir de nivel" (si ha subido) y luego `trigger` para la unidad
+ * de `index`, cada uno con su propia tirada de aleatoriedad.
  */
-export function fuseTeam<T extends OwnedUnit>(
-  team: readonly T[],
-): { team: T[]; fusions: Fusion[] } {
-  let current = [...team]
-  const fusions: Fusion[] = []
-
-  for (;;) {
-    const group = current.find(
-      (unit) =>
-        (unit.level ?? 1) < MAX_LEVEL &&
-        copiesOf(current, unit.defId, unit.level ?? 1) >= COPIES_TO_FUSE,
-    )
-    if (!group) return { team: current, fusions }
-
-    const level = group.level ?? 1
-    const copies = current
-      .filter((unit) => unit.defId === group.defId && (unit.level ?? 1) === level)
-      .slice(0, COPIES_TO_FUSE)
-    const [first, ...consumed] = copies
-    if (!first) return { team: current, fusions }
-
-    const nextLevel = (level + 1) as Level
-    const sum = (key: 'atkBonus' | 'hpBonus'): number | undefined => {
-      const total = copies.reduce((acc, unit) => acc + (unit[key] ?? 0), 0)
-      return total === 0 ? undefined : total
-    }
-    const fused: T = { ...first, level: nextLevel, atkBonus: sum('atkBonus'), hpBonus: sum('hpBonus') }
-    current = current
-      .filter((unit) => !consumed.includes(unit))
-      .map((unit) => (unit === first ? fused : unit))
-    fusions.push({ unitId: first.id, consumedIds: consumed.map((unit) => unit.id), level: nextLevel })
+function fireAfterStack(
+  state: ShopState,
+  team: OwnedUnit[],
+  index: number,
+  leveledUp: boolean,
+  trigger: 'onBuy' | null,
+): { state: ShopState; team: OwnedUnit[]; events: ShopEvent[] } {
+  let current = state
+  let currentTeam = team
+  const events: ShopEvent[] = []
+  const triggers = [...(leveledUp ? (['onLevelUp'] as const) : []), ...(trigger ? [trigger] : [])]
+  for (const t of triggers) {
+    const { rng, state: rolled } = nextRng(current)
+    current = rolled
+    const fired = fireShopTrigger(currentTeam, index, t, rng)
+    currentTeam = fired.team
+    const source = currentTeam[index]
+    if (source) events.push(...shopTriggerEvents(currentTeam, source, fired.label, fired.buffs))
   }
+  return { state: current, team: currentTeam, events }
 }
 
-/** Si comprar la oferta de ese hueco completaría una fusión. */
-export function wouldFuse(state: ShopState, slot: number): boolean {
+/** Índice de la unidad igual sobre la que se apilaría una compra sin destino. */
+function autoStackIndex(team: readonly OwnedUnit[], defId: UnitId): number {
+  return team.findIndex((unit) => unit.defId === defId && unit.copies < MAX_COPIES)
+}
+
+/** Dónde acabaría una compra: apilada sobre una unidad, en un hueco nuevo o en ningún sitio. */
+export type BuyPlacement =
+  | { readonly kind: 'stack'; readonly index: number }
+  | { readonly kind: 'insert'; readonly index: number }
+  | { readonly kind: 'blocked'; readonly error: ShopError }
+
+/**
+ * Resuelve el destino de una compra. Con `position` sobre una unidad igual se
+ * apila; sobre una distinta o un hueco vacío se coloca como unidad nueva. Sin
+ * `position`, se apila sobre la primera unidad igual que admita copias y si
+ * no hay ninguna se añade al final.
+ */
+export function buyPlacement(state: ShopState, slot: number, position?: number): BuyPlacement {
   const offer = state.offers[slot]
-  return offer !== null && offer !== undefined && copiesOf(state.team, offer.defId, 1) >= COPIES_TO_FUSE - 1
+  if (!offer) return { kind: 'blocked', error: 'noOffer' }
+  const team = state.team
+
+  if (position !== undefined) {
+    const target = team[position]
+    if (target && target.defId === offer.defId) {
+      return target.copies >= MAX_COPIES
+        ? { kind: 'blocked', error: 'maxLevel' }
+        : { kind: 'stack', index: position }
+    }
+  } else {
+    const index = autoStackIndex(team, offer.defId)
+    if (index >= 0) return { kind: 'stack', index }
+  }
+
+  if (team.length >= MAX_TEAM_SIZE) return { kind: 'blocked', error: 'teamFull' }
+  return { kind: 'insert', index: clampIndex(position ?? team.length, team.length) }
+}
+
+/** Si la oferta se puede apilar sobre alguna unidad del equipo. */
+export function canStack(state: ShopState, slot: number): boolean {
+  const offer = state.offers[slot]
+  return offer !== null && offer !== undefined && autoStackIndex(state.team, offer.defId) >= 0
 }
 
 /**
- * Compra la unidad del hueco `slot` y la coloca en `position` (al final si no
- * se indica). Si completa una fusión se puede comprar con el equipo lleno.
- * Después de fusionar, la unidad resultante dispara "Al comprar".
+ * Compra la oferta del hueco `slot` (ver `buyPlacement` para el destino).
+ * Apilar se permite aunque el equipo esté lleno. Después dispara "Al subir de
+ * nivel" si corresponde y "Al comprar", con el nivel resultante.
  */
 export function buy(state: ShopState, slot: number, position?: number): ShopResult {
   const offer = state.offers[slot]
   if (!offer) return { ok: false, error: 'noOffer' }
   if (state.gold < UNIT_COST) return { ok: false, error: 'notEnoughGold' }
-  if (state.team.length >= MAX_TEAM_SIZE && !wouldFuse(state, slot)) {
-    return { ok: false, error: 'teamFull' }
+  const placement = buyPlacement(state, slot, position)
+  if (placement.kind === 'blocked') return { ok: false, error: placement.error }
+
+  const team = [...state.team]
+  const events: ShopEvent[] = [{ type: 'gold', amount: -UNIT_COST }]
+  let leveledUp = false
+
+  if (placement.kind === 'stack') {
+    const target = team[placement.index]
+    if (!target) return { ok: false, error: 'noUnit' }
+    const stacked = addCopies(target, 1)
+    team[placement.index] = stacked
+    leveledUp = stacked.level > target.level
+    events.push({ type: 'stack', unitId: target.id, sourceId: offer.id, copies: stacked.copies })
+    if (leveledUp) events.push({ type: 'levelUp', unitId: target.id, level: stacked.level })
+  } else {
+    team.splice(placement.index, 0, { id: offer.id, defId: offer.defId, level: 1, copies: 1 })
   }
 
-  const unit: OwnedUnit = { id: offer.id, defId: offer.defId, level: 1 }
-  const inserted = [...state.team]
-  inserted.splice(clampIndex(position ?? inserted.length, inserted.length), 0, unit)
-  const { team, fusions } = fuseTeam(inserted)
-  // La última fusión es la que contiene la copia comprada (las demás son su cadena).
-  const resultId = fusions.at(-1)?.unitId ?? unit.id
-  const index = team.findIndex((u) => u.id === resultId)
-
-  const { rng, state: rolled } = nextRng(state)
-  const fired = fireShopTrigger(team, index, 'onBuy', rng)
-  const result = team[index] ?? unit
+  const bought = {
+    ...state,
+    gold: state.gold - UNIT_COST,
+    offers: state.offers.map((o, i) => (i === slot ? null : o)),
+  }
+  const fired = fireAfterStack(bought, team, placement.index, leveledUp, 'onBuy')
   return {
     ok: true,
-    state: {
-      ...rolled,
-      gold: state.gold - UNIT_COST,
-      offers: state.offers.map((o, i) => (i === slot ? null : o)),
-      team: fired.team,
-    },
-    events: [
-      { type: 'gold', amount: -UNIT_COST },
-      ...fusions.map((fusion): ShopEvent => ({ type: 'fusion', ...fusion })),
-      ...shopTriggerEvents(fired.team, result, fired.label, fired.buffs),
-    ],
+    state: { ...fired.state, team: fired.team },
+    events: [...events, ...fired.events],
+  }
+}
+
+/**
+ * Junta la unidad de `from` sobre la de `to`, que debe ser igual: suma sus
+ * copias en `to` y libera `from`. Se queda el mayor bonus de ATK y de PV.
+ */
+export function merge(state: ShopState, from: number, to: number): ShopResult {
+  const source = state.team[from]
+  const target = state.team[to]
+  if (!source || !target || from === to) return { ok: false, error: 'noUnit' }
+  if (source.defId !== target.defId) return { ok: false, error: 'notSameUnit' }
+  if (source.copies + target.copies > MAX_COPIES) return { ok: false, error: 'maxLevel' }
+
+  const maxBonus = (a?: number, b?: number): number | undefined =>
+    a === undefined && b === undefined ? undefined : Math.max(a ?? 0, b ?? 0)
+  const merged: OwnedUnit = {
+    ...addCopies(target, source.copies),
+    atkBonus: maxBonus(source.atkBonus, target.atkBonus),
+    hpBonus: maxBonus(source.hpBonus, target.hpBonus),
+  }
+  const team = state.team.map((unit, i) => (i === to ? merged : unit)).filter((_, i) => i !== from)
+  const index = team.indexOf(merged)
+  const leveledUp = merged.level > target.level
+
+  const events: ShopEvent[] = [
+    { type: 'stack', unitId: target.id, sourceId: source.id, copies: merged.copies },
+  ]
+  if (leveledUp) events.push({ type: 'levelUp', unitId: target.id, level: merged.level })
+  const fired = fireAfterStack(state, team, index, leveledUp, null)
+  return {
+    ok: true,
+    state: { ...fired.state, team: fired.team },
+    events: [...events, ...fired.events],
   }
 }
 
@@ -254,7 +372,7 @@ export function sell(state: ShopState, index: number): ShopResult {
   const fired = fireShopTrigger(state.team, index, 'onSell', rng)
   const events = shopTriggerEvents(fired.team, unit, fired.label, fired.buffs)
   const team = fired.team.filter((_, i) => i !== index)
-  const refund = unit.level ?? 1
+  const refund = unit.level
 
   return {
     ok: true,
@@ -263,13 +381,25 @@ export function sell(state: ShopState, index: number): ShopResult {
   }
 }
 
-/** Sustituye todas las unidades de la tienda, también los huecos vacíos. */
+/** Sustituye las ofertas no congeladas, también los huecos vacíos. */
 export function reroll(state: ShopState): ShopResult {
   if (state.gold < REROLL_COST) return { ok: false, error: 'notEnoughGold' }
   return {
     ok: true,
     state: rollOffers({ ...state, gold: state.gold - REROLL_COST }),
     events: [{ type: 'gold', amount: -REROLL_COST }],
+  }
+}
+
+/** Congela o descongela la oferta de un hueco. Es gratis. */
+export function toggleFreeze(state: ShopState, slot: number): ShopResult {
+  const offer = state.offers[slot]
+  if (!offer) return { ok: false, error: 'noOffer' }
+  const toggled: ShopOffer = offer.frozen === true ? { id: offer.id, defId: offer.defId } : { ...offer, frozen: true }
+  return {
+    ok: true,
+    state: { ...state, offers: state.offers.map((o, i) => (i === slot ? toggled : o)) },
+    events: [],
   }
 }
 

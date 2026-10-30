@@ -22,10 +22,15 @@ export function captureCards(root: ParentNode, ids: readonly number[]): CardShot
 }
 
 /**
- * Las copias consumidas vuelan hasta la unidad fusionada y esta da un salto
- * con un destello dorado.
+ * La copia apilada vuela hasta su unidad. Si sube de nivel, la unidad da un
+ * salto con un destello dorado; si no, un pequeño rebote.
  */
-export function playFusion(root: ParentNode, shots: readonly CardShot[], targetId: number): void {
+export function playStack(
+  root: ParentNode,
+  shots: readonly CardShot[],
+  targetId: number,
+  levelUp: boolean,
+): void {
   const target = root.querySelector<HTMLElement>(unitSelector(targetId))
   if (!target) return
   const to = target.getBoundingClientRect()
@@ -54,23 +59,20 @@ export function playFusion(root: ParentNode, shots: readonly CardShot[], targetI
     )
   }
 
+  const start = shots.length > 0 ? 0.4 : 0
+  const glow = levelUp ? 'drop-shadow(0 0 16px rgb(255 205 90 / 95%))' : 'drop-shadow(0 0 6px rgb(255 255 255 / 60%))'
   timeline
     .fromTo(
       target,
       { scale: 1, filter: 'drop-shadow(0 0 0 rgb(255 205 90 / 0%))' },
-      {
-        scale: 1.25,
-        filter: 'drop-shadow(0 0 14px rgb(255 205 90 / 95%))',
-        duration: 0.18,
-        ease: 'power2.out',
-      },
-      shots.length > 0 ? 0.4 : 0,
+      { scale: levelUp ? 1.3 : 1.1, filter: glow, duration: 0.18, ease: 'power2.out' },
+      start,
     )
     .to(target, {
       scale: 1,
       filter: 'drop-shadow(0 0 0 rgb(255 205 90 / 0%))',
-      duration: 0.45,
-      ease: 'elastic.out(1, 0.5)',
+      duration: levelUp ? 0.55 : 0.3,
+      ease: levelUp ? 'elastic.out(1, 0.5)' : 'power2.out',
       clearProps: 'filter,transform',
     })
 }
