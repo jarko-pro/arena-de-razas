@@ -16,7 +16,7 @@ import {
   type ShopResult,
   type ShopState,
 } from '../src/engine/shop'
-import { UNITS, type UnitId } from '../src/engine/units'
+import { RACES, UNITS, type Race, type UnitId } from '../src/engine/units'
 import { fight, team } from './helpers'
 
 function expectOk(result: ShopResult): ShopState {
@@ -26,7 +26,7 @@ function expectOk(result: ShopResult): ShopState {
 
 /** Tienda con unas ofertas concretas, para no depender del azar. */
 function shopWith(offers: readonly UnitId[], teamIds: readonly UnitId[] = [], round = 1): ShopState {
-  const base = createShop(round, team(...teamIds), 'prueba')
+  const base = createShop(round, team(...teamIds), 'prueba', RACES)
   return {
     ...base,
     offers: offers.map((defId, i) => ({ id: 100 + i, defId })),
@@ -37,7 +37,7 @@ describe('Huecos y tiers según la ronda', () => {
   it('3, 4 y 5 huecos', () => {
     expect([1, 2, 3, 4, 5, 9].map(slotsForRound)).toEqual([3, 3, 4, 4, 5, 5])
     for (const round of [1, 3, 5]) {
-      expect(createShop(round, [], 'x').offers).toHaveLength(slotsForRound(round))
+      expect(createShop(round, [], 'x', RACES).offers).toHaveLength(slotsForRound(round))
     }
   })
 
@@ -48,8 +48,8 @@ describe('Huecos y tiers según la ronda', () => {
   it('solo ofrece unidades del tier desbloqueado o inferior y nunca fichas', () => {
     for (const round of [1, 3, 5]) {
       const tier = tierForRound(round)
-      expect(shopPool(round).every((id) => UNITS[id].tier <= tier && !UNITS[id].token)).toBe(true)
-      let state = createShop(round, [], `tiers-${round}`)
+      expect(shopPool(round, RACES).every((id) => UNITS[id].tier <= tier && !UNITS[id].token)).toBe(true)
+      let state = createShop(round, [], `tiers-${round}`, RACES)
       for (let i = 0; i < 30; i++) {
         for (const offer of state.offers) {
           expect(offer && UNITS[offer.defId].tier).toBeLessThanOrEqual(tier)
@@ -57,15 +57,38 @@ describe('Huecos y tiers según la ronda', () => {
         state = expectOk(reroll({ ...state, gold: 10 }))
       }
     }
-    expect(shopPool(1)).toHaveLength(8)
-    expect(shopPool(3)).toHaveLength(16)
-    expect(shopPool(5)).toHaveLength(24)
+    expect(shopPool(1, RACES)).toHaveLength(8)
+    expect(shopPool(3, RACES)).toHaveLength(16)
+    expect(shopPool(5, RACES)).toHaveLength(24)
+  })
+})
+
+describe('Razas de la tienda', () => {
+  it('solo ofrece unidades de las razas indicadas', () => {
+    const races: readonly Race[] = ['orc', 'undead']
+    expect(shopPool(5, races).every((id) => races.includes(UNITS[id].race))).toBe(true)
+    expect(shopPool(5, races)).toHaveLength(12)
+    let state = createShop(5, [], 'razas', races)
+    for (let i = 0; i < 30; i++) {
+      for (const offer of state.offers) {
+        expect(offer && races.includes(UNITS[offer.defId].race)).toBe(true)
+      }
+      state = expectOk(reroll({ ...state, gold: 10 }))
+    }
+  })
+
+  it('una sola raza en la ronda 1 ofrece sus 2 unidades de tier 1', () => {
+    expect(shopPool(1, ['human'])).toEqual(['recruit', 'archer'])
+  })
+
+  it('sin razas la tienda sale vacía', () => {
+    expect(createShop(1, [], 'x', []).offers).toHaveLength(0)
   })
 })
 
 describe('Oro', () => {
   it('cada ronda empieza con 10 de oro', () => {
-    expect(createShop(1, [], 'x').gold).toBe(GOLD_PER_ROUND)
+    expect(createShop(1, [], 'x', RACES).gold).toBe(GOLD_PER_ROUND)
   })
 
   it('comprar cuesta 3 y deja el hueco vacío', () => {
@@ -84,7 +107,7 @@ describe('Oro', () => {
   })
 
   it('reroll cuesta 1 y sustituye todos los huecos', () => {
-    const bought = expectOk(buy(createShop(1, [], 'r'), 0))
+    const bought = expectOk(buy(createShop(1, [], 'r', RACES), 0))
     const state = expectOk(reroll(bought))
     expect(state.gold).toBe(GOLD_PER_ROUND - UNIT_COST - REROLL_COST)
     expect(state.offers).toHaveLength(3)
@@ -193,7 +216,7 @@ describe('Al vender', () => {
 describe('Determinismo', () => {
   it('misma semilla y mismas acciones = misma tienda', () => {
     const play = (): ShopState => {
-      let state = createShop(5, team('grunt'), 'semilla')
+      let state = createShop(5, team('grunt'), 'semilla', RACES)
       state = expectOk(reroll(state))
       state = expectOk(buy(state, 2))
       return expectOk(reroll(state))
@@ -203,7 +226,7 @@ describe('Determinismo', () => {
 
   it('otra semilla da otras tiendas', () => {
     const offers = (seed: string): string =>
-      createShop(5, [], seed)
+      createShop(5, [], seed, RACES)
         .offers.map((offer) => offer?.defId)
         .join(',')
     const all = new Set(['a', 'b', 'c', 'd', 'e'].map(offers))

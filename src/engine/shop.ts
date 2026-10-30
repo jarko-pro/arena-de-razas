@@ -4,7 +4,7 @@
 import { fireShopTrigger, type ShopBuff } from './abilities'
 import { MAX_TEAM_SIZE, type TeamUnit } from './combat'
 import { createRng, type Rng } from './rng'
-import { PLAYABLE_UNITS, type Tier, type UnitId } from './units'
+import { PLAYABLE_UNITS, type Race, type Tier, type UnitId } from './units'
 
 /** Parámetros de la tienda (diseno.md). */
 export const GOLD_PER_ROUND = 10
@@ -30,6 +30,8 @@ export interface ShopState {
   /** Equipo de delante a atrás. */
   readonly team: readonly OwnedUnit[]
   readonly seed: string
+  /** Razas cuyas unidades pueden salir en la tienda. */
+  readonly races: readonly Race[]
   /** Tiradas de aleatoriedad hechas en esta ronda; cada una usa su propia semilla. */
   readonly rolls: number
   readonly nextId: number
@@ -68,10 +70,12 @@ export function tierForRound(round: number): Tier {
   return 1
 }
 
-/** Unidades que pueden salir en la tienda en esa ronda (sin fichas). */
-export function shopPool(round: number): readonly UnitId[] {
+/** Unidades de esas razas que pueden salir en la tienda en esa ronda (sin fichas). */
+export function shopPool(round: number, races: readonly Race[]): readonly UnitId[] {
   const tier = tierForRound(round)
-  return PLAYABLE_UNITS.filter((unit) => unit.tier <= tier).map((unit) => unit.id)
+  return PLAYABLE_UNITS.filter((unit) => unit.tier <= tier && races.includes(unit.race)).map(
+    (unit) => unit.id,
+  )
 }
 
 /** Siguiente generador de la ronda: misma semilla y mismas acciones = mismos resultados. */
@@ -82,7 +86,7 @@ function nextRng(state: ShopState): { rng: Rng; state: ShopState } {
 
 function rollOffers(state: ShopState): ShopState {
   const { rng, state: next } = nextRng(state)
-  const pool = shopPool(next.round)
+  const pool = shopPool(next.round, next.races)
   let nextId = next.nextId
   const offers: ShopOffer[] = []
   for (let i = 0; i < slotsForRound(next.round); i++) {
@@ -92,8 +96,16 @@ function rollOffers(state: ShopState): ShopState {
   return { ...next, offers, nextId }
 }
 
-/** Tienda al empezar una ronda: oro completo (no se acumula) y unidades nuevas. */
-export function createShop(round: number, team: readonly TeamUnit[], seed: string): ShopState {
+/**
+ * Tienda al empezar una ronda: oro completo (no se acumula) y unidades nuevas
+ * de las razas indicadas.
+ */
+export function createShop(
+  round: number,
+  team: readonly TeamUnit[],
+  seed: string,
+  races: readonly Race[],
+): ShopState {
   const owned = team.map((unit, i) => ({ ...unit, id: i + 1 }))
   return rollOffers({
     round,
@@ -101,6 +113,7 @@ export function createShop(round: number, team: readonly TeamUnit[], seed: strin
     offers: [],
     team: owned,
     seed,
+    races: [...races],
     rolls: 0,
     nextId: owned.length + 1,
   })

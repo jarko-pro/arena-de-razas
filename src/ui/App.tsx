@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { TeamUnit } from '../engine/combat'
 import { battleTeam, createShop, type ShopState } from '../engine/shop'
+import { RACES } from '../engine/units'
 import { BattleScreen } from './BattleScreen'
 import { ShopScreen } from './ShopScreen'
 import { StartScreen } from './StartScreen'
@@ -29,7 +30,7 @@ export function App() {
     case 'start':
       return (
         <StartScreen
-          onPlay={() => setScreen({ kind: 'shop', shop: createShop(1, [], newSeed()) })}
+          onPlay={() => setScreen({ kind: 'shop', shop: createShop(1, [], newSeed(), RACES) })}
         />
       )
 
@@ -60,7 +61,7 @@ export function App() {
           onBack={() =>
             setScreen({
               kind: 'shop',
-              shop: createShop(shop.round + 1, battleTeam(shop), shop.seed),
+              shop: createShop(shop.round + 1, battleTeam(shop), shop.seed, shop.races),
             })
           }
         />
