@@ -230,3 +230,53 @@ body {
   font-size: 26px;
   color: var(--fg);
 }
+
+/* ------------------------------------------------------ Pantalla rivales --- */
+
+.pantalla-rivales {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  background: radial-gradient(120% 70% at 50% 0%, #2a2019, var(--bg) 70%);
+}
+
+.lista-rivales {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 26rem;
+  margin: 0.4rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tarjeta-rival {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 1.05rem;
+}
+
+.inicial-rival {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 2px solid var(--hit);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--hit);
+  font-family: var(--display);
+  font-size: 1.6rem;
+}

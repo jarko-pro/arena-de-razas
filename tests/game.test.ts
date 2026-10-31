@@ -6,13 +6,11 @@ import {
   finishRound,
   newGame,
   prepareBattle,
-  randomRival,
-  rivalSize,
+  rivalForRound,
   type GameState,
 } from '../src/engine/game'
-import { createRng } from '../src/engine/rng'
-import { GOLD_PER_ROUND, buy, shopPool } from '../src/engine/shop'
-import { RACES, UNITS } from '../src/engine/units'
+import { GOLD_PER_ROUND, buy } from '../src/engine/shop'
+import { RACES } from '../src/engine/units'
 
 const play = (game: GameState, outcomes: readonly Outcome[]): GameState =>
   outcomes.reduce(finishRound, game)
@@ -89,27 +87,49 @@ describe('Fin de la partida', () => {
   })
 })
 
-describe('Rival provisional', () => {
-  it('tiene 3, 4 y luego 5 unidades', () => {
-    expect([1, 2, 3, 4, 8].map(rivalSize)).toEqual([3, 4, 5, 5, 5])
-    expect(randomRival(1, createRng(1), RACES)).toHaveLength(3)
-    expect(randomRival(6, createRng(1), RACES)).toHaveLength(5)
-  })
-
-  it('solo usa unidades de nivel 1 que la tienda puede ofrecer en esa ronda', () => {
-    for (const round of [1, 3, 5]) {
-      const pool = shopPool(round, RACES)
-      for (const unit of randomRival(round, createRng(round), RACES)) {
-        expect(pool).toContain(unit.defId)
-        expect(unit.level ?? 1).toBe(1)
-      }
+describe('Rivales de la partida', () => {
+  it('empieza con 4 rivales de razas distintas que ya han jugado la ronda 1', () => {
+    const game = newGame('partida', RACES)
+    expect(game.rivals).toHaveLength(4)
+    expect(new Set(game.rivals.map((rival) => rival.race)).size).toBe(4)
+    for (const rival of game.rivals) {
+      expect(rival.shop.round).toBe(1)
+      expect(rival.shop.team.length).toBeGreaterThan(0)
     }
   })
 
-  it('respeta las razas disponibles', () => {
-    for (const unit of randomRival(5, createRng('orcos'), ['orc'])) {
-      expect(UNITS[unit.defId].race).toBe('orc')
+  it('los rivales pasan de ronda con el mismo oro extra que el jugador', () => {
+    const game = play(newGame('partida', RACES), ['victoryA', 'victoryA'])
+    for (const rival of game.rivals) {
+      expect(rival.shop.round).toBe(3)
+      expect(rival.shop.startGold).toEqual(game.shop.startGold)
     }
+  })
+
+  it('el rival de la ronda es uno de los 4 y su equipo es el de ese bot', () => {
+    const game = newGame('partida', RACES)
+    const rival = rivalForRound(game)
+    const battle = prepareBattle(game)
+    expect(rival).toBeDefined()
+    expect(battle.rivalName).toBe(rival?.name)
+    expect(battle.rivalTeam.map((unit) => unit.defId)).toEqual(
+      rival?.shop.team.map((unit) => unit.defId),
+    )
+  })
+
+  it('la elección del rival reparte entre los 4 y se puede repetir', () => {
+    const game = newGame('reparto', RACES)
+    const pickAt = (seed: string, round: number): string | undefined =>
+      rivalForRound({ ...game, seed, shop: { ...game.shop, round } })?.name
+    const seen = new Set<string | undefined>()
+    let repeated = false
+    for (let i = 0; i < 40; i++) {
+      const seed = `semilla-${i}`
+      seen.add(pickAt(seed, 1))
+      if (pickAt(seed, 1) === pickAt(seed, 2)) repeated = true
+    }
+    expect(seen.size).toBe(4)
+    expect(repeated).toBe(true)
   })
 
   it('es determinista: misma partida y ronda, mismo combate', () => {

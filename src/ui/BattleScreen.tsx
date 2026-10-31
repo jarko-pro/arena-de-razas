@@ -34,6 +34,7 @@ interface BattleScreenProps {
   readonly round: number
   readonly playerTeam: readonly TeamUnit[]
   readonly rivalTeam: readonly TeamUnit[]
+  readonly rivalName: string
   readonly seed: string
   /** Se llama una vez, cuando el combate termina de verse o se salta. */
   readonly onFinish: (outcome: Outcome) => void
@@ -45,6 +46,7 @@ export function BattleScreen({
   round,
   playerTeam,
   rivalTeam,
+  rivalName,
   seed,
   onFinish,
   children,
@@ -143,7 +145,7 @@ export function BattleScreen({
     <div className="pantalla-combate">
       <div className="cabecera-combate">
         <h1>Ronda {round}</h1>
-        <p>Rival provisional al azar hasta que lleguen los bots.</p>
+        <p>Contra {rivalName}</p>
       </div>
 
       <div className="controles">
@@ -160,7 +162,7 @@ export function BattleScreen({
 
       <div className="bandos">
         <span className="izq">Tu equipo</span>
-        <span className="der">Rival</span>
+        <span className="der">{rivalName}</span>
       </div>
 
       <div className="arena" ref={arenaRef} style={{ height: geo?.height }}>
@@ -184,7 +186,7 @@ export function BattleScreen({
       <div className="listas">
         {(['A', 'B'] as const).map((side) => (
           <div className="lista" key={side}>
-            <h2>{side === 'A' ? 'Tu equipo (de delante a atrás)' : 'Rival (de delante a atrás)'}</h2>
+            <h2>{side === 'A' ? 'Tu equipo (de delante a atrás)' : `${rivalName} (de delante a atrás)`}</h2>
             <ol>
               {result.teams[side].map((unit) => (
                 <li key={unit.uid}>

@@ -1,8 +1,9 @@
-// Estado de la partida: rondas, vidas, victorias, rachas y rival de cada ronda.
+// Estado de la partida: rondas, vidas, victorias, rachas y rivales.
 
-import { MAX_TEAM_SIZE, type Outcome, type TeamUnit } from './combat'
-import { createRng, type Rng } from './rng'
-import { battleTeam, createShop, nextShop, shopPool, type ShopState } from './shop'
+import { createRivals, playBotTurn, type Rival } from './bot'
+import type { Outcome, TeamUnit } from './combat'
+import { createRng } from './rng'
+import { battleTeam, createShop, nextShop, type ShopState } from './shop'
 import type { Race } from './units'
 
 /** Parámetros de la partida (diseno.md). */
@@ -55,6 +56,8 @@ export interface GameState {
   readonly wins: number
   readonly streak: Streak
   readonly shop: ShopState
+  /** Los 4 rivales, cada uno con su tienda ya jugada en la ronda actual. */
+  readonly rivals: readonly Rival[]
   readonly status: GameStatus
   readonly lastRound: RoundResult | null
 }
@@ -64,10 +67,19 @@ export interface BattleSetup {
   readonly round: number
   readonly playerTeam: readonly TeamUnit[]
   readonly rivalTeam: readonly TeamUnit[]
+  readonly rivalName: string
   readonly seed: string
 }
 
-/** Partida nueva: vidas completas, sin victorias ni racha y la tienda de la ronda 1. */
+/** Cada rival juega su turno de tienda. */
+function playRivals(rivals: readonly Rival[]): Rival[] {
+  return rivals.map((rival) => playBotTurn(rival).rival)
+}
+
+/**
+ * Partida nueva: vidas completas, sin victorias ni racha, la tienda de la
+ * ronda 1 y los 4 rivales con su primera tienda ya jugada.
+ */
 export function newGame(seed: string, races: readonly Race[]): GameState {
   return {
     seed,
@@ -76,37 +88,26 @@ export function newGame(seed: string, races: readonly Race[]): GameState {
     wins: 0,
     streak: NO_STREAK,
     shop: createShop(1, [], seed, races),
+    rivals: playRivals(createRivals(seed, races)),
     status: 'playing',
     lastRound: null,
   }
 }
 
-/** Unidades del rival provisional: 3 en la ronda 1, 4 en la 2 y 5 desde la 3. */
-export function rivalSize(round: number): number {
-  return Math.min(MAX_TEAM_SIZE, round + 2)
-}
-
-/**
- * Rival provisional hasta que lleguen los bots (hito 6): unidades de nivel 1
- * al azar entre las que puede ofrecer la tienda en esa ronda.
- */
-export function randomRival(round: number, rng: Rng, races: readonly Race[]): TeamUnit[] {
-  const pool = shopPool(round, races)
-  const team: TeamUnit[] = []
-  for (let i = 0; i < rivalSize(round); i++) {
-    const defId = rng.pick(pool)
-    if (defId !== undefined) team.push({ defId })
-  }
-  return team
+/** Rival de la ronda actual: al azar entre los 4 con la semilla, se puede repetir. */
+export function rivalForRound(game: GameState): Rival | undefined {
+  return createRng(`${game.seed}:rivalDeRonda:${game.shop.round}`).pick(game.rivals)
 }
 
 /** Equipos y semilla del combate de la ronda actual. Misma partida = mismo combate. */
 export function prepareBattle(game: GameState): BattleSetup {
   const { round } = game.shop
+  const rival = rivalForRound(game)
   return {
     round,
     playerTeam: battleTeam(game.shop),
-    rivalTeam: randomRival(round, createRng(`${game.seed}:rival:${round}`), game.races),
+    rivalTeam: rival ? battleTeam(rival.shop) : [],
+    rivalName: rival?.name ?? 'Rival',
     seed: `${game.seed}:combate:${round}`,
   }
 }
@@ -114,8 +115,8 @@ export function prepareBattle(game: GameState): BattleSetup {
 /**
  * Aplica el resultado del combate de la ronda actual: victoria suma una
  * victoria, derrota quita una vida y empate no cambia nada. Si la partida
- * sigue, prepara la tienda de la ronda siguiente con el oro de la racha.
- * Una partida terminada no cambia.
+ * sigue, prepara la tienda de la ronda siguiente con el oro de la racha, y
+ * los rivales juegan la suya con ese mismo oro. Una partida terminada no cambia.
  */
 export function finishRound(game: GameState, outcome: Outcome): GameState {
   if (game.status !== 'playing') return game
@@ -125,13 +126,18 @@ export function finishRound(game: GameState, outcome: Outcome): GameState {
   const lives = Math.max(0, game.lives - livesLost)
   const streak = updateStreak(game.streak, outcome)
   const status: GameStatus = wins >= WINS_TO_WIN ? 'won' : lives <= 0 ? 'lost' : 'playing'
+  const playing = status === 'playing'
+  const extraGold = streakGold(streak.count)
   return {
     ...game,
     wins,
     lives,
     streak,
     status,
-    shop: status === 'playing' ? nextShop(game.shop, streakGold(streak.count)) : game.shop,
+    shop: playing ? nextShop(game.shop, extraGold) : game.shop,
+    rivals: playing
+      ? playRivals(game.rivals.map((rival) => ({ ...rival, shop: nextShop(rival.shop, extraGold) })))
+      : game.rivals,
     lastRound: { round: game.shop.round, outcome, winsGained, livesLost },
   }
 }

@@ -95,12 +95,15 @@ Estimación con Claude Code: 20‑32 h en total.
 ## Hito 6 – Rivales generados por bot (≈1‑2 h)
 
 **Tareas**
-- `bot.ts`: el bot juega la tienda con las mismas reglas según `docs/diseno.md`, incluidos apilar, congelar y oro por rachas.
-- El rival de cada ronda es el equipo del bot en esa ronda.
-- Mostrar en la pantalla de combate el nombre del rival y su raza preferida.
+- `bot.ts`: el bot juega la tienda con las mismas reglas según `docs/diseno.md`, incluidos apilar, juntar, vender, reroll y congelar.
+- 4 rivales por partida, cada uno con nombre y raza preferida distinta; juegan la tienda todas las rondas con el mismo oro que el jugador (base + su oro por racha).
+- Pantalla «Rivales» antes de la primera tienda con los 4 nombres (sin mostrar la raza).
+- El rival de cada ronda se elige al azar entre los 4 (25 % cada uno) y su equipo es el de ese bot en esa ronda.
+- Mostrar en la pantalla de combate el nombre del rival encima de su equipo.
 
 **Terminado cuando**
 - El bot nunca hace jugadas ilegales (con pruebas).
+- Los 4 rivales tienen razas preferidas distintas y la elección del rival es determinista con la semilla (con pruebas).
 - Los rivales se sienten de un nivel parecido al del jugador en la misma ronda.
 
 ---

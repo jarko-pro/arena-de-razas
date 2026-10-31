@@ -175,10 +175,13 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 
 ## Rivales (versión 1)
 
-- Los rivales los genera un **bot** que juega la tienda con las mismas reglas, el mismo oro y las mismas rondas que el jugador.
-- Estrategia del bot: elige una raza preferida al azar, prioriza comprar unidades de esa raza y apilar copias, y hace reroll si no encuentra nada útil.
-- El bot usa las mismas reglas que el jugador: apilar, congelar y oro por rachas.
-- El equipo rival de la ronda N es el que tendría un bot en la ronda N.
+- Al empezar la partida se generan **4 rivales** (bots). Cada uno tiene un **nombre** y una **raza preferida distinta**, elegida entre las razas disponibles para los bots (en la versión 1, las 4 razas: una por rival).
+- Antes de la primera tienda, la pantalla **«Rivales»** presenta los 4 nombres. La raza preferida **no se muestra** al jugador: se descubre viendo sus equipos.
+- Los 4 bots juegan la tienda **en todas las rondas**, aunque esa ronda no les toque combatir, con las mismas reglas que el jugador: comprar, apilar, juntar, vender, reroll y congelar.
+- Oro de los bots: en cada ronda, cada bot recibe **el mismo oro que el jugador** en esa ronda (10 base + el oro extra por racha que tuvo el jugador). Los bots no tienen racha propia.
+- En cada ronda, el rival se elige **al azar entre los 4** (25 % cada uno, con la semilla de la partida). Se puede repetir rival en rondas seguidas.
+- El rival de la ronda **no se revela en la tienda**; se conoce al entrar en combate. En la pantalla de combate se ve su nombre encima de su equipo.
+- Estrategia del bot: prioriza apilar copias de lo que ya tiene y comprar unidades de su raza preferida (las de tier más alto primero); junta unidades iguales cuando puede; si el equipo está lleno y aparece algo claramente mejor, vende la más débil; hace reroll si no encuentra nada útil; congela la tienda si deja sin comprar algo útil y la descongela en la ronda siguiente tras comprarlo.
 
 ## Ideas de recompensa (pendiente de probar, no implementar todavía)
 

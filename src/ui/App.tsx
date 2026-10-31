@@ -10,13 +10,15 @@ import { RACES } from '../engine/units'
 import { BattleScreen } from './BattleScreen'
 import { EndScreen } from './EndScreen'
 import { GameHud } from './GameHud'
+import { RivalsScreen } from './RivalsScreen'
 import { RoundSummary } from './RoundSummary'
 import { ShopScreen } from './ShopScreen'
 import { StartScreen } from './StartScreen'
 
-/** Inicio → tienda → combate (con su resultado) → tienda… → final. */
+/** Inicio → rivales → tienda → combate (con su resultado) → tienda… → final. */
 type Screen =
   | { readonly kind: 'start' }
+  | { readonly kind: 'rivals'; readonly game: GameState }
   | { readonly kind: 'shop'; readonly game: GameState }
   | {
       readonly kind: 'battle'
@@ -33,7 +35,7 @@ function newSeed(): string {
 }
 
 function startGame(): Screen {
-  return { kind: 'shop', game: newGame(newSeed(), RACES) }
+  return { kind: 'rivals', game: newGame(newSeed(), RACES) }
 }
 
 export function App() {
@@ -42,6 +44,13 @@ export function App() {
   switch (screen.kind) {
     case 'start':
       return <StartScreen onPlay={() => setScreen(startGame())} />
+
+    case 'rivals': {
+      const { game } = screen
+      return (
+        <RivalsScreen rivals={game.rivals} onStart={() => setScreen({ kind: 'shop', game })} />
+      )
+    }
 
     case 'shop': {
       const { game } = screen
@@ -69,6 +78,7 @@ export function App() {
             round={battle.round}
             playerTeam={battle.playerTeam}
             rivalTeam={battle.rivalTeam}
+            rivalName={battle.rivalName}
             seed={battle.seed}
             onFinish={(outcome) => setScreen({ ...screen, after: finishRound(game, outcome) })}
           >
