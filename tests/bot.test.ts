@@ -10,7 +10,7 @@ import {
 import { MAX_TEAM_SIZE } from '../src/engine/combat'
 import {
   REROLL_COST,
-  UNIT_COST,
+  MIN_UNIT_COST,
   levelForCopies,
   nextShop,
   tierForRound,
@@ -102,7 +102,7 @@ describe('Estrategia del bot', () => {
     for (const seed of SEEDS) {
       for (const rival of createRivals(seed, RACES)) {
         for (const { turn } of playRounds(rival, 10)) {
-          expect(turn.rival.shop.gold).toBeLessThan(UNIT_COST + REROLL_COST)
+          expect(turn.rival.shop.gold).toBeLessThan(MIN_UNIT_COST + REROLL_COST)
         }
       }
     }
@@ -165,14 +165,17 @@ describe('Estrategia del bot', () => {
     const turns = playRounds(rival, 2, () => 3)
     const second = turns[1]
     expect(second?.before.gold).toBe(13)
-    expect(second?.turn.rival.shop.gold).toBeLessThan(UNIT_COST + REROLL_COST)
+    expect(second?.turn.rival.shop.gold).toBeLessThan(MIN_UNIT_COST + REROLL_COST)
   })
 
-  it('coloca detrás las unidades de inicio del combate', () => {
+  it('coloca detrás las unidades de inicio del combate, salvo las que invocan', () => {
     for (const seed of SEEDS) {
       for (const rival of createRivals(seed, RACES)) {
         const team = playRounds(rival, 6).at(-1)?.turn.rival.shop.team ?? []
-        const back = team.map((unit) => UNITS[unit.defId].ability?.trigger === 'battleStart')
+        const back = team.map((unit) => {
+          const ability = UNITS[unit.defId].ability
+          return ability?.trigger === 'battleStart' && ability.effect.kind !== 'summon'
+        })
         const firstBack = back.indexOf(true)
         if (firstBack >= 0) expect(back.slice(firstBack).every(Boolean)).toBe(true)
       }

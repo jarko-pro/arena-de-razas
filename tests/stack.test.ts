@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { teamUnitStats } from '../src/engine/combat'
 import {
   GOLD_PER_ROUND,
-  UNIT_COST,
+  unitCost,
   buy,
   canStack,
   createShop,
@@ -72,7 +72,7 @@ describe('Comprar encima', () => {
   it('soltar sobre una unidad igual suma una copia y descuenta el oro', () => {
     const state = expectOk(buy(shopWith(['grunt'], [unit(1, 'zombie'), unit(2, 'grunt')]), 0, 1))
     expect(summary(state)).toEqual(['zombie:1:1', 'grunt:1:2'])
-    expect(state.gold).toBe(30 - UNIT_COST)
+    expect(state.gold).toBe(30 - unitCost('grunt'))
   })
 
   it('funciona con el equipo lleno', () => {
@@ -81,7 +81,7 @@ describe('Comprar encima', () => {
     const state = expectOk(buy(base, 0, 1))
     expect(state.team).toHaveLength(5)
     expect(state.team[1]).toMatchObject({ defId: 'grunt', copies: 2 })
-    expect(state.gold).toBe(GOLD_PER_ROUND - UNIT_COST)
+    expect(state.gold).toBe(GOLD_PER_ROUND - unitCost('grunt'))
   })
 
   it('sin destino se apila sobre la unidad igual (doble clic)', () => {
@@ -212,7 +212,7 @@ describe('Juntar dos unidades del equipo', () => {
 describe('Fichas según el nivel', () => {
   it('un Esqueleto de nivel 2 invoca Huesos 2/2 y uno de nivel 3, Huesos 3/3', () => {
     for (const level of [2, 3] as const) {
-      const summon = eventsOf(fight(team(['skeleton', level]), team('knight')).events, 'summon')[0]
+      const summon = eventsOf(fight(team(['skeleton', level]), team(['knight', 2])).events, 'summon')[0]
       expect([summon?.unit.atk, summon?.unit.hp]).toEqual([level, level])
     }
   })

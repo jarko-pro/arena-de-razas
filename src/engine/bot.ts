@@ -5,7 +5,8 @@ import { createRng } from './rng'
 import {
   MAX_COPIES,
   REROLL_COST,
-  UNIT_COST,
+  MIN_UNIT_COST,
+  unitCost,
   buy,
   buyPlacement,
   createShop,
@@ -139,12 +140,12 @@ function planFor(state: ShopState, slot: number, race: Race): BuyPlan | null {
 
   if (placement.kind === 'stack') {
     const target = state.team[placement.index]
-    if (!target || state.gold < UNIT_COST) return null
+    if (!target || state.gold < unitCost(offer.defId)) return null
     // Apilar siempre interesa: es lo primero que busca el bot.
     return { kind: 'buy', slot, score: ownedScore(target, race) + 100 }
   }
   if (placement.kind === 'insert') {
-    return state.gold >= UNIT_COST ? { kind: 'buy', slot, score } : null
+    return state.gold >= unitCost(offer.defId) ? { kind: 'buy', slot, score } : null
   }
   if (placement.error !== 'teamFull') return null
 
@@ -152,7 +153,7 @@ function planFor(state: ShopState, slot: number, race: Race): BuyPlan | null {
   const index = weakestIndex(state.team, race)
   const weakest = state.team[index]
   if (!weakest || weakest.defId === offer.defId) return null
-  if (state.gold + weakest.level < UNIT_COST) return null
+  if (state.gold + weakest.level < unitCost(offer.defId)) return null
   if (score < ownedScore(weakest, race) + REPLACE_MARGIN) return null
   return { kind: 'replace', slot, sell: index, score }
 }
@@ -188,9 +189,14 @@ function worthFreezing(state: ShopState, race: Race): boolean {
   )
 }
 
-/** Las de habilidad al inicio del combate (a distancia o de apoyo) van detrás. */
+/**
+ * Las de habilidad al inicio del combate (a distancia o de apoyo) van detrás,
+ * salvo las que invocan: sus invocaciones aparecen detrás de ellas y, en la
+ * última posición, no llegarían a luchar.
+ */
 function isBackline(unit: OwnedUnit): boolean {
-  return UNITS[unit.defId].ability?.trigger === 'battleStart'
+  const ability = UNITS[unit.defId].ability
+  return ability?.trigger === 'battleStart' && ability.effect.kind !== 'summon'
 }
 
 /** Orden de combate: las más resistentes delante y las de apoyo detrás. */
@@ -244,7 +250,7 @@ export function playBotTurn(rival: Rival): BotTurn {
     }
 
     // Nada útil: reroll si después aún podría comprar algo.
-    if (state.gold < REROLL_COST + UNIT_COST) break
+    if (state.gold < REROLL_COST + MIN_UNIT_COST) break
     if (state.frozen && !act({ type: 'freeze' })) break
     if (!act({ type: 'reroll' })) break
   }

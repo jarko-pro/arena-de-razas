@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . && tsc --noEmit",
-    "sprites": "node --no-warnings scripts/sprites.ts"
+    "sprites": "node --no-warnings scripts/sprites.ts",
+    "simulate": "tsx scripts/simulate.ts"
   },
   "dependencies": {
     "gsap": "^3.15.0",
@@ -27,6 +28,7 @@
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
     "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.1",
     "vite": "^8.3.5",

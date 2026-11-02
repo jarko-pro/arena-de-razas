@@ -6,7 +6,6 @@ import {
   MAX_COPIES,
   REROLL_COST,
   SHOP_ERROR_TEXT,
-  UNIT_COST,
   buy,
   buyPlacement,
   levelProgress,
@@ -20,6 +19,7 @@ import {
   type ShopEvent,
   type ShopResult,
   type ShopState,
+  unitCost,
 } from '../engine/shop'
 import { RACE_NAMES, UNITS, abilityText } from '../engine/units'
 import { UnitArt } from './UnitArt'
@@ -109,6 +109,8 @@ interface CardProps {
   readonly unitId?: number
   /** Unidad del equipo: muestra los puntos de experiencia. */
   readonly owned?: OwnedUnit
+  /** Oferta de la tienda: precio y si llega el oro para pagarlo. */
+  readonly price?: { readonly cost: number; readonly affordable: boolean }
   readonly frozen?: boolean
   readonly selected?: boolean
   readonly dragging?: boolean
@@ -141,7 +143,7 @@ function XpPips({ unit }: { readonly unit: OwnedUnit }) {
   )
 }
 
-function ShopCard({ unit, unitId, owned, frozen, selected, dragging, ...handlers }: CardProps) {
+function ShopCard({ unit, unitId, owned, price, frozen, selected, dragging, ...handlers }: CardProps) {
   const def = UNITS[unit.defId]
   const level = unit.level ?? 1
   const stats = teamUnitStats(unit)
@@ -166,6 +168,14 @@ function ShopCard({ unit, unitId, owned, frozen, selected, dragging, ...handlers
       </div>
       <span className="nm">{def.name}</span>
       {owned && <XpPips unit={owned} />}
+      {price && (
+        <span
+          className={price.affordable ? 'precio' : 'precio caro'}
+          aria-label={`Cuesta ${price.cost} de oro`}
+        >
+          {price.cost} <small>oro</small>
+        </span>
+      )}
     </div>
   )
 }
@@ -373,6 +383,7 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
               {offer && (
                 <ShopCard
                   unit={offer}
+                  price={{ cost: unitCost(offer.defId), affordable: state.gold >= unitCost(offer.defId) }}
                   frozen={state.frozen}
                   {...handlersFor({ kind: 'offer', id: offer.id }, offer)}
                 />
@@ -512,14 +523,15 @@ function Detail({ unit, owned, gold, placement, onBuy, onSell }: DetailProps) {
   const stats = teamUnitStats(unit)
   const text = abilityText(def, level)
   const bonus = (unit.atkBonus ?? 0) !== 0 || (unit.hpBonus ?? 0) !== 0
+  const cost = unitCost(unit.defId)
   const buyLabel =
     placement === 'blocked'
       ? 'Equipo lleno'
-      : gold < UNIT_COST
+      : gold < cost
         ? 'Sin oro'
         : placement === 'stack'
-          ? `Apilar (${UNIT_COST} oro)`
-          : `Comprar (${UNIT_COST} oro)`
+          ? `Apilar (${cost} oro)`
+          : `Comprar (${cost} oro)`
 
   return (
     <div className="detalle-unidad">
@@ -547,7 +559,7 @@ function Detail({ unit, owned, gold, placement, onBuy, onSell }: DetailProps) {
           type="button"
           className="btn primary"
           onClick={onBuy}
-          disabled={gold < UNIT_COST || placement === 'blocked'}
+          disabled={gold < cost || placement === 'blocked'}
         >
           {buyLabel}
         </button>

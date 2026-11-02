@@ -109,7 +109,7 @@ export interface Ability {
   readonly trigger: Trigger
   /** Nombre decorativo que se muestra al dispararse. */
   readonly label: string
-  /** Descripción en español; `{n}` se sustituye por el valor del nivel. */
+  /** Descripción en español; `{n}` se sustituye por el valor del nivel y `{s}` por "s" si no es 1. */
   readonly text: string
   readonly effect: Effect
 }
@@ -187,7 +187,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
     race: 'orc',
     tier: 2,
     atk: 2,
-    hp: 4,
+    hp: 5,
     ability: {
       trigger: 'onDamaged',
       label: '¡Furia!',
@@ -219,8 +219,8 @@ export const UNITS: Record<UnitId, UnitDef> = {
     name: 'Saqueador',
     race: 'orc',
     tier: 3,
-    atk: 3,
-    hp: 3,
+    atk: 4,
+    hp: 4,
     ability: {
       trigger: 'onKill',
       label: 'Botín de guerra',
@@ -234,7 +234,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
     race: 'orc',
     tier: 3,
     atk: 5,
-    hp: 5,
+    hp: 6,
     ability: {
       trigger: 'onHit',
       label: 'Mazazo',
@@ -302,7 +302,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
         kind: 'buff',
         target: { kind: 'allyAhead' },
         atk: fixed(0),
-        hp: perLevel(3),
+        hp: perLevel(2),
       },
     },
   },
@@ -312,7 +312,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
     race: 'human',
     tier: 3,
     atk: 3,
-    hp: 6,
+    hp: 5,
     ability: {
       trigger: 'battleStart',
       label: 'Grito de guerra',
@@ -330,7 +330,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
     name: 'Paladín',
     race: 'human',
     tier: 3,
-    atk: 4,
+    atk: 3,
     hp: 5,
     ability: {
       trigger: 'onDeath',
@@ -340,7 +340,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
         kind: 'buff',
         target: { kind: 'allAllies' },
         atk: fixed(0),
-        hp: perLevel(2),
+        hp: perLevel(1),
       },
     },
   },
@@ -390,7 +390,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
     race: 'lizard',
     tier: 2,
     atk: 2,
-    hp: 4,
+    hp: 5,
     ability: {
       trigger: 'onHit',
       label: 'Mirada pétrea',
@@ -404,7 +404,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
     race: 'lizard',
     tier: 2,
     atk: 3,
-    hp: 2,
+    hp: 3,
     ability: {
       trigger: 'battleStart',
       label: 'Mimetismo',
@@ -493,7 +493,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
     race: 'undead',
     tier: 2,
     atk: 2,
-    hp: 3,
+    hp: 4,
     ability: {
       trigger: 'onAnyDeath',
       label: 'Carroña',
@@ -506,7 +506,7 @@ export const UNITS: Record<UnitId, UnitDef> = {
     name: 'Espectro',
     race: 'undead',
     tier: 3,
-    atk: 3,
+    atk: 4,
     hp: 3,
     ability: {
       trigger: 'onDeath',
@@ -521,11 +521,11 @@ export const UNITS: Record<UnitId, UnitDef> = {
     race: 'undead',
     tier: 3,
     atk: 3,
-    hp: 4,
+    hp: 5,
     ability: {
       trigger: 'battleStart',
       label: 'Levantar a los muertos',
-      text: 'Inicio del combate: invoca {n} Esqueletos 1/1 detrás de él.',
+      text: 'Inicio del combate: invoca {n} Esqueleto{s} 1/1 detrás de él.',
       effect: {
         kind: 'summon',
         unitId: 'skeleton',
@@ -596,5 +596,6 @@ export function abilityText(def: UnitDef, level: Level): string {
   if (!ability) return ''
   const value = abilityValue(ability.effect)
   if (!value) return ability.text
-  return ability.text.replaceAll('{n}', String(resolveValue(value, level)))
+  const n = resolveValue(value, level)
+  return ability.text.replaceAll('{n}', String(n)).replaceAll('{s}', n === 1 ? '' : 's')
 }

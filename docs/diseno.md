@@ -1,6 +1,6 @@
 # Diseño – Arena de Razas (versión 1)
 
-Título provisional. Este documento es la fuente de verdad de las reglas. Los valores numéricos son iniciales y se ajustarán con playtesting.
+Título provisional. Este documento es la fuente de verdad de las reglas. Los valores numéricos se ajustaron en el hito 7 con el simulador de partidas entre bots (`pnpm simulate`) y se seguirán ajustando con playtesting.
 
 ## Resumen
 
@@ -26,7 +26,7 @@ Se gana la partida al conseguir **10 victorias**. Se pierde al quedarse **sin vi
 | Parámetro | Valor |
 | --- | --- |
 | Oro por ronda | 10 base + oro extra por racha (no se acumula entre rondas) |
-| Coste de una unidad | 3 |
+| Coste de una unidad | Según su tier: 2 (tier 1), 3 (tier 2), 4 (tier 3) |
 | Coste de reroll | 1 |
 | Venta | Devuelve 1 de oro por nivel de la unidad |
 | Huecos de la tienda | 3 (rondas 1‑2), 4 (rondas 3‑4), 5 (ronda 5 en adelante) |
@@ -40,7 +40,7 @@ Se gana la partida al conseguir **10 victorias**. Se pierde al quedarse **sin vi
 | 3 | Ronda 5 |
 
 **Acciones en la tienda**:
-- Comprar una unidad de la tienda: en un hueco libre del equipo, o encima de una unidad igual para apilarla (esto último aunque el equipo esté lleno).
+- Comprar una unidad de la tienda: en un hueco libre del equipo, o encima de una unidad igual para apilarla (esto último aunque el equipo esté lleno). Cuesta lo que marque su tier, también al apilar o si está congelada desde una ronda anterior. El precio se ve en cada carta de la tienda.
 - Vender una unidad del equipo.
 - Reroll: sustituir todas las unidades de la tienda. No se puede con la tienda congelada.
 - Congelar o descongelar la tienda (gratis).
@@ -133,10 +133,10 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 | --- | --- | --- | --- |
 | Grunt | 1 | 3/2 | Sin habilidad |
 | Lobo de guerra | 1 | 2/2 | Al morir: +n ATK a todos los orcos aliados (n=1) |
-| Berserker | 2 | 2/4 | Al recibir daño: +n ATK (n=2) |
+| Berserker | 2 | 2/5 | Al recibir daño: +n ATK (n=2) |
 | Chamán | 2 | 2/3 | Al morir: +n/+n al aliado de detrás (n=2) |
-| Saqueador | 3 | 3/3 | Al matar: +n/+n (n=2) |
-| Ogro aplastador | 3 | 5/5 | Al golpear: n de daño a la unidad rival de detrás de su objetivo (n=2) |
+| Saqueador | 3 | 4/4 | Al matar: +n/+n (n=2) |
+| Ogro aplastador | 3 | 5/6 | Al golpear: n de daño a la unidad rival de detrás de su objetivo (n=2) |
 
 ### Humanos – resistentes y de apoyo
 
@@ -145,9 +145,9 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 | Recluta | 1 | 1/3 | Al comprar: +n PV permanente a un aliado al azar (n=1) |
 | Arquero | 1 | 1/2 | Inicio del combate: n de daño a un enemigo al azar (n=2) |
 | Escudero | 2 | 2/5 | Sin habilidad |
-| Clérigo | 2 | 1/3 | Inicio del combate: +n PV al aliado de delante (n=3) |
-| Caballero | 3 | 3/6 | Inicio del combate: +n ATK a los demás humanos aliados (n=1) |
-| Paladín | 3 | 4/5 | Al morir: +n PV a todos los aliados (n=2) |
+| Clérigo | 2 | 1/3 | Inicio del combate: +n PV al aliado de delante (n=2) |
+| Caballero | 3 | 3/5 | Inicio del combate: +n ATK a los demás humanos aliados (n=1) |
+| Paladín | 3 | 3/5 | Al morir: +n PV a todos los aliados (n=1) |
 
 ### Hombres lagarto – debilitan y golpean primero
 
@@ -155,8 +155,8 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 | --- | --- | --- | --- |
 | Escupidor | 1 | 1/2 | Inicio del combate: n de daño a todos los enemigos (n=1) |
 | Cría de lagarto | 1 | 2/2 | Al vender: +n/+n permanente a un lagarto aliado al azar (n=1) |
-| Basilisco | 2 | 2/4 | Al golpear: su objetivo pierde n ATK (n=1) |
-| Camaleón | 2 | 3/2 | Inicio del combate: su ATK pasa a ser el del enemigo de delante si es mayor, +n (n=0, 1, 2 según nivel) |
+| Basilisco | 2 | 2/5 | Al golpear: su objetivo pierde n ATK (n=1) |
+| Camaleón | 2 | 3/3 | Inicio del combate: su ATK pasa a ser el del enemigo de delante si es mayor, +n (n=0, 1, 2 según nivel) |
 | Saurio | 3 | 5/4 | Al matar: recupera todos sus PV |
 | Hidra | 3 | 3/5 | Al morir: invoca 2 Cabezas de hidra de n/n (n=2) |
 
@@ -167,9 +167,9 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 | Esqueleto | 1 | 1/1 | Al morir: invoca unos Huesos de n/n (n=1) |
 | Zombi | 1 | 1/5 | Sin habilidad |
 | Nigromante | 2 | 1/3 | Cuando muere un aliado: +n/+n (n=1) |
-| Necrófago | 2 | 2/3 | Cuando muere cualquier unidad: +n ATK (n=1) |
-| Espectro | 3 | 3/3 | Al morir por primera vez en el combate: vuelve con n PV (n=1) |
-| Liche | 3 | 3/4 | Inicio del combate: invoca n Esqueletos 1/1 detrás de él (n=1) |
+| Necrófago | 2 | 2/4 | Cuando muere cualquier unidad: +n ATK (n=1) |
+| Espectro | 3 | 4/3 | Al morir por primera vez en el combate: vuelve con n PV (n=1) |
+| Liche | 3 | 3/5 | Inicio del combate: invoca n Esqueletos 1/1 detrás de él (n=1) |
 
 **Invocaciones**: aparecen en la posición de la unidad que las invoca (o detrás, si se indica). Si el equipo ya tiene 5 unidades, la invocación no ocurre. Las fichas invocadas no se pueden comprar ni pasan a la tienda.
 
@@ -181,7 +181,7 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 - Oro de los bots: en cada ronda, cada bot recibe **el mismo oro que el jugador** en esa ronda (10 base + el oro extra por racha que tuvo el jugador). Los bots no tienen racha propia.
 - En cada ronda, el rival se elige **al azar entre los 4** (25 % cada uno, con la semilla de la partida). Se puede repetir rival en rondas seguidas.
 - El rival de la ronda **no se revela en la tienda**; se conoce al entrar en combate. En la pantalla de combate se ve su nombre encima de su equipo.
-- Estrategia del bot: prioriza apilar copias de lo que ya tiene y comprar unidades de su raza preferida (las de tier más alto primero); junta unidades iguales cuando puede; si el equipo está lleno y aparece algo claramente mejor, vende la más débil; hace reroll si no encuentra nada útil; congela la tienda si deja sin comprar algo útil y la descongela en la ronda siguiente tras comprarlo.
+- Estrategia del bot: prioriza apilar copias de lo que ya tiene y comprar unidades de su raza preferida (las de tier más alto primero); junta unidades iguales cuando puede; si el equipo está lleno y aparece algo claramente mejor, vende la más débil; hace reroll si no encuentra nada útil; congela la tienda si deja sin comprar algo útil y la descongela en la ronda siguiente tras comprarlo. Ordena el equipo con las más resistentes delante y las de habilidad al inicio del combate detrás, salvo las que invocan (el Liche), que van delante para que sus invocaciones sirvan.
 
 ## Ideas de recompensa (pendiente de probar, no implementar todavía)
 

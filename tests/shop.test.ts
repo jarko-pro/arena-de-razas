@@ -3,7 +3,8 @@ import { teamUnitStats } from '../src/engine/combat'
 import {
   GOLD_PER_ROUND,
   REROLL_COST,
-  UNIT_COST,
+  TIER_COST,
+  unitCost,
   battleTeam,
   buy,
   createShop,
@@ -91,9 +92,9 @@ describe('Oro', () => {
     expect(createShop(1, [], 'x', RACES).gold).toBe(GOLD_PER_ROUND)
   })
 
-  it('comprar cuesta 3 y deja el hueco vacío', () => {
+  it('comprar cuesta lo que marca su tier y deja el hueco vacío', () => {
     const state = expectOk(buy(shopWith(['grunt', 'zombie', 'archer']), 1))
-    expect(state.gold).toBe(GOLD_PER_ROUND - UNIT_COST)
+    expect(state.gold).toBe(GOLD_PER_ROUND - 2)
     expect(state.offers[1]).toBeNull()
     expect(state.team.map((u) => u.defId)).toEqual(['zombie'])
   })
@@ -109,14 +110,29 @@ describe('Oro', () => {
   it('reroll cuesta 1 y sustituye todos los huecos', () => {
     const bought = expectOk(buy(createShop(1, [], 'r', RACES), 0))
     const state = expectOk(reroll(bought))
-    expect(state.gold).toBe(GOLD_PER_ROUND - UNIT_COST - REROLL_COST)
+    expect(state.gold).toBe(GOLD_PER_ROUND - TIER_COST[1] - REROLL_COST)
     expect(state.offers).toHaveLength(3)
     expect(state.offers.every((offer) => offer !== null)).toBe(true)
   })
 
   it('no se puede comprar sin oro', () => {
-    const state = { ...shopWith(['grunt']), gold: UNIT_COST - 1 }
+    const state = { ...shopWith(['grunt']), gold: unitCost('grunt') - 1 }
     expect(buy(state, 0)).toEqual({ ok: false, error: 'notEnoughGold' })
+  })
+
+  it('el coste sube con el tier: 2, 3 y 4 de oro', () => {
+    expect(TIER_COST).toEqual({ 1: 2, 2: 3, 3: 4 })
+    expect(unitCost('grunt')).toBe(2)
+    expect(unitCost('berserker')).toBe(3)
+    expect(unitCost('ogre')).toBe(4)
+    const state = expectOk(buy(shopWith(['grunt', 'berserker', 'ogre']), 2))
+    expect(state.gold).toBe(GOLD_PER_ROUND - 4)
+  })
+
+  it('con 3 de oro se compra una de tier 2 pero no una de tier 3', () => {
+    const state = { ...shopWith(['berserker', 'ogre']), gold: 3 }
+    expect(buy(state, 1)).toEqual({ ok: false, error: 'notEnoughGold' })
+    expect(expectOk(buy(state, 0)).gold).toBe(0)
   })
 
   it('no se puede hacer reroll sin oro', () => {
@@ -126,13 +142,15 @@ describe('Oro', () => {
     })
   })
 
-  it('con 10 de oro se compran 3 unidades y sobra 1 para un reroll', () => {
+  it('con 10 de oro en la ronda 1 se compran 3 de tier 1, un reroll y una cuarta', () => {
     let state = shopWith(['grunt', 'zombie', 'archer'])
     for (let slot = 0; slot < 3; slot++) state = expectOk(buy(state, slot))
-    expect(state.gold).toBe(1)
+    expect(state.gold).toBe(4)
     state = expectOk(reroll(state))
-    expect(state.gold).toBe(0)
-    expect(buy(state, 0)).toEqual({ ok: false, error: 'notEnoughGold' })
+    state = expectOk(buy(state, 0))
+    expect(state.gold).toBe(1)
+    expect(state.team.reduce((sum, unit) => sum + unit.copies, 0)).toBe(4)
+    expect(buy(state, 1)).toEqual({ ok: false, error: 'notEnoughGold' })
   })
 })
 

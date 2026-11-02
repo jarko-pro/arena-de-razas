@@ -28,8 +28,8 @@ describe('humanos', () => {
     const { events, teams } = fight(team('squire', 'cleric'), team('zombie'))
     const buff = firstOf(events, 'buff')
     expect(buff?.uid).toBe(teams.A[0]?.uid)
-    expect(buff?.hp).toBe(3)
-    expect(buff?.hpNow).toBe(8)
+    expect(buff?.hp).toBe(2)
+    expect(buff?.hpNow).toBe(7)
   })
 
   it('el Caballero solo mejora a los demás humanos', () => {
@@ -43,7 +43,7 @@ describe('humanos', () => {
     const { events, teams } = fight(team('paladin', 'zombie'), team(['knight', 3]))
     const buff = firstOf(events, 'buff')
     expect(buff?.uid).toBe(teams.A[1]?.uid)
-    expect(buff?.hp).toBe(2)
+    expect(buff?.hp).toBe(1)
   })
 })
 

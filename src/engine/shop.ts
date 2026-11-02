@@ -3,13 +3,21 @@
 import { fireShopTrigger, type ShopBuff } from './abilities'
 import { MAX_TEAM_SIZE, type TeamUnit } from './combat'
 import { createRng, type Rng } from './rng'
-import { PLAYABLE_UNITS, type Level, type Race, type Tier, type UnitId } from './units'
+import { PLAYABLE_UNITS, UNITS, type Level, type Race, type Tier, type UnitId } from './units'
 
 /** Parámetros de la tienda (diseno.md). */
 export const GOLD_PER_ROUND = 10
-export const UNIT_COST = 3
+/** Coste de una unidad según su tier. */
+export const TIER_COST: Record<Tier, number> = { 1: 2, 2: 3, 3: 4 }
+/** Lo que cuesta la unidad más barata: con menos oro no se puede comprar nada. */
+export const MIN_UNIT_COST = Math.min(...Object.values(TIER_COST))
 export const REROLL_COST = 1
 export const MAX_LEVEL: Level = 3
+
+/** Precio de compra de una unidad (también al apilar). */
+export function unitCost(defId: UnitId): number {
+  return TIER_COST[UNITS[defId].tier]
+}
 
 /** Copias totales apiladas con las que se alcanza cada nivel. */
 export const COPIES_FOR_LEVEL: Record<Level, number> = { 1: 1, 2: 3, 3: 9 }
@@ -304,12 +312,13 @@ export function canStack(state: ShopState, slot: number): boolean {
 export function buy(state: ShopState, slot: number, position?: number): ShopResult {
   const offer = state.offers[slot]
   if (!offer) return { ok: false, error: 'noOffer' }
-  if (state.gold < UNIT_COST) return { ok: false, error: 'notEnoughGold' }
+  const cost = unitCost(offer.defId)
+  if (state.gold < cost) return { ok: false, error: 'notEnoughGold' }
   const placement = buyPlacement(state, slot, position)
   if (placement.kind === 'blocked') return { ok: false, error: placement.error }
 
   const team = [...state.team]
-  const events: ShopEvent[] = [{ type: 'gold', amount: -UNIT_COST }]
+  const events: ShopEvent[] = [{ type: 'gold', amount: -cost }]
   let leveledUp = false
 
   if (placement.kind === 'stack') {
@@ -326,7 +335,7 @@ export function buy(state: ShopState, slot: number, position?: number): ShopResu
 
   const bought = {
     ...state,
-    gold: state.gold - UNIT_COST,
+    gold: state.gold - cost,
     offers: state.offers.map((o, i) => (i === slot ? null : o)),
   }
   const fired = fireAfterStack(bought, team, placement.index, leveledUp, 'onBuy')

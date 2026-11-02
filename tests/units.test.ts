@@ -59,28 +59,28 @@ describe('catálogo de unidades', () => {
     const expected: Record<string, [number, number]> = {
       grunt: [3, 2],
       warWolf: [2, 2],
-      berserker: [2, 4],
+      berserker: [2, 5],
       shaman: [2, 3],
-      raider: [3, 3],
-      ogre: [5, 5],
+      raider: [4, 4],
+      ogre: [5, 6],
       recruit: [1, 3],
       archer: [1, 2],
       squire: [2, 5],
       cleric: [1, 3],
-      knight: [3, 6],
-      paladin: [4, 5],
+      knight: [3, 5],
+      paladin: [3, 5],
       spitter: [1, 2],
       lizardWhelp: [2, 2],
-      basilisk: [2, 4],
-      chameleon: [3, 2],
+      basilisk: [2, 5],
+      chameleon: [3, 3],
       saurian: [5, 4],
       hydra: [3, 5],
       skeleton: [1, 1],
       zombie: [1, 5],
       necromancer: [1, 3],
-      ghoul: [2, 3],
-      spectre: [3, 3],
-      lich: [3, 4],
+      ghoul: [2, 4],
+      spectre: [4, 3],
+      lich: [3, 5],
     }
     for (const [id, [atk, hp]] of Object.entries(expected)) {
       const def = ALL_UNITS.find((unit) => unit.id === id)
@@ -114,7 +114,7 @@ describe('escalado por nivel', () => {
     expect(abilityText(UNITS.berserker, 1)).toBe('Al recibir daño: +2 ATK.')
     expect(abilityText(UNITS.berserker, 2)).toBe('Al recibir daño: +4 ATK.')
     expect(abilityText(UNITS.shaman, 3)).toBe('Al morir: +6/+6 al aliado de detrás.')
-    expect(abilityText(UNITS.cleric, 1)).toBe('Inicio del combate: +3 PV al aliado de delante.')
+    expect(abilityText(UNITS.cleric, 1)).toBe('Inicio del combate: +2 PV al aliado de delante.')
     expect(abilityText(UNITS.lich, 2)).toBe(
       'Inicio del combate: invoca 2 Esqueletos 1/1 detrás de él.',
     )

@@ -59,7 +59,7 @@ describe('Al matar', () => {
   })
 
   it('no se dispara si el atacante muere en el mismo golpe', () => {
-    const { events, outcome } = fight(team('saurian'), team('paladin'))
+    const { events, outcome } = fight(team('saurian'), team('raider'))
     expect(outcome).toBe('draw')
     expect(eventsOf(events, 'heal')).toHaveLength(0)
   })
