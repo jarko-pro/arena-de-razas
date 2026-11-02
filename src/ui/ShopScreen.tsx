@@ -22,6 +22,8 @@ import {
   type ShopState,
 } from '../engine/shop'
 import { RACE_NAMES, UNITS, abilityText } from '../engine/units'
+import { UnitArt } from './UnitArt'
+import { artClass } from './sprites'
 import './arena.css'
 import './shop.css'
 
@@ -57,10 +59,6 @@ interface Ghost {
 const DRAG_THRESHOLD = 6
 /** Tiempo máximo entre dos pulsaciones para contar como doble clic. */
 const DOUBLE_TAP_MS = 350
-
-function short(name: string): string {
-  return name.slice(0, 2)
-}
 
 function samePick(a: Pick | null, b: Pick | null): boolean {
   return a !== null && b !== null && a.kind === b.kind && a.id === b.id
@@ -160,8 +158,8 @@ function ShopCard({ unit, unitId, owned, frozen, selected, dragging, ...handlers
       data-unit-id={unitId}
       {...handlers}
     >
-      <div className={`body r-${def.race}`}>
-        <span className="mono">{short(def.name)}</span>
+      <div className={`body r-${def.race}${artClass(def.id)}`}>
+        <UnitArt id={def.id} name={def.name} />
         <span className={`nivel nivel-${level}`}>Nv {level}</span>
         <span className="st atk">{stats.atk}</span>
         <span className="st hp">{stats.hp}</span>

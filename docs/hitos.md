@@ -114,7 +114,7 @@ Estimación con Claude Code: 20‑32 h en total.
 - Revisar que las 24 unidades funcionan como dice `docs/diseno.md`.
 - Script de simulación: miles de combates entre bots para detectar unidades o razas demasiado fuertes o débiles.
 - Ajustar valores en `docs/diseno.md` y en `units.ts` a la vez.
-- Iconos o arte provisional coherente para cada unidad.
+- ~~Iconos o arte provisional coherente para cada unidad.~~ Hecho: sprites en `src/assets/units/` (generados con `pnpm sprites`); falta el de la Cabeza de hidra.
 
 **Terminado cuando**
 - Ninguna raza gana más del 60 % de las partidas simuladas entre bots.

@@ -1,4 +1,6 @@
 import type { UnitSnapshot } from '../engine/combat'
+import { UnitArt } from './UnitArt'
+import { artClass } from './sprites'
 
 interface UnitCardProps {
   readonly unit: UnitSnapshot
@@ -6,17 +8,12 @@ interface UnitCardProps {
   readonly registerEl: (el: HTMLDivElement | null) => void
 }
 
-/** Abreviatura de dos letras que se ve dentro de la ficha. */
-function short(name: string): string {
-  return name.slice(0, 2)
-}
-
 export function UnitCard({ unit, description, registerEl }: UnitCardProps) {
   return (
     <div className="u" ref={registerEl} data-uid={unit.uid}>
       <div className="lunge">
-        <div className={`body r-${unit.race}`} title={description}>
-          <span className="mono">{short(unit.name)}</span>
+        <div className={`body r-${unit.race}${artClass(unit.defId)}`} title={description}>
+          <UnitArt id={unit.defId} name={unit.name} flip={unit.side === 'B'} />
           {unit.level > 1 && <span className={`nivel nivel-${unit.level}`}>Nv {unit.level}</span>}
           <span className="st atk">{unit.atk}</span>
           <span className="st hp">{unit.hp}</span>

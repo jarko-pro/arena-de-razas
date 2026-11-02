@@ -1,12 +1,18 @@
 // Corta una hoja de sprites con fondo blanco en un archivo por personaje.
 //
-//   node scripts/sprites.ts <hoja.png> <carpeta-salida> <prefijo> [nombre...] [--height=N]
+//   node scripts/sprites.ts <hoja.png> <carpeta-salida> <prefijo> [nombre...] [opciones]
 //
 // Si se dan nombres (los id de las unidades, de izquierda a derecha), cada
 // archivo se llama <nombre>.webp; si no, <prefijo>_01.webp, <prefijo>_02.webp...
 //
 // Con --height=N el personaje más alto mide N píxeles en el lienzo en vez de
 // llenarlo. Sirve para que un sprite suelto encaje con los de su hoja.
+//
+// Con --min-height=N los personajes que medirían menos de N píxeles se agrandan
+// hasta N (por ejemplo una cría que, a escala real, no se distinguiría).
+//
+// Con --grow=nombre:factor ese personaje se escala por el factor (1.2 = un 20 %
+// más grande). Se puede repetir para varios.
 //
 // 1. Quita el fondo: relleno desde los bordes sobre los píxeles casi blancos
 //    (así no se borran los blancos de dentro, como dientes o calaveras) y
@@ -52,12 +58,27 @@ interface Blob {
 }
 
 const args = process.argv.slice(2)
-const heightArg = args.find((a) => a.startsWith('--height='))
-const targetHeight = heightArg ? Number(heightArg.slice('--height='.length)) : undefined
+const option = (name: string): number | undefined => {
+  const arg = args.find((a) => a.startsWith(`--${name}=`))
+  return arg === undefined ? undefined : Number(arg.slice(name.length + 3))
+}
+const targetHeight = option('height')
+const minHeight = option('min-height')
+const grow = new Map(
+  args
+    .filter((a) => a.startsWith('--grow='))
+    .map((a) => {
+      const [name = '', factor = ''] = a.slice('--grow='.length).split(':')
+      return [name, Number(factor)] as const
+    }),
+)
 const [input, outDir, prefix, ...names] = args.filter((a) => !a.startsWith('--'))
-if (!input || !outDir || !prefix || (targetHeight !== undefined && !(targetHeight > 0))) {
+const badOption =
+  [targetHeight, minHeight].some((n) => n !== undefined && !(n > 0)) ||
+  [...grow].some(([name, factor]) => !names.includes(name) || !(factor > 0))
+if (!input || !outDir || !prefix || badOption) {
   console.error(
-    'Uso: node scripts/sprites.ts <hoja.png> <carpeta-salida> <prefijo> [nombre...] [--height=N]',
+    'Uso: node scripts/sprites.ts <hoja.png> <carpeta-salida> <prefijo> [nombre...] [--height=N] [--min-height=N] [--grow=nombre:factor]',
   )
   process.exit(1)
 }
@@ -268,8 +289,12 @@ for (const [i, c] of characters.entries()) {
     const y = Math.floor(p / W) - c.box.y0
     rgba.copy(own, (y * w + x) * 4, p * 4, p * 4 + 4)
   }
-  const sw = Math.max(1, Math.round(w * scale))
-  const sh = Math.max(1, Math.round(h * scale))
+  // Los que quedarían por debajo de --min-height se agrandan hasta ella, y los
+  // de --grow por su factor; nunca más allá del lienzo.
+  const base = minHeight === undefined || h * scale >= minHeight ? scale : minHeight / h
+  const ownScale = Math.min(base * (grow.get(names[i] ?? '') ?? 1), inner / w, inner / h)
+  const sw = Math.max(1, Math.round(w * ownScale))
+  const sh = Math.max(1, Math.round(h * ownScale))
   const scaled = await sharp(own, { raw: { width: w, height: h, channels: 4 } })
     .resize(sw, sh, { kernel: 'lanczos3' })
     .png()

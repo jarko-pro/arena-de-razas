@@ -15,7 +15,7 @@ export const SLOTS = 11
 
 export function measureArena(width: number): Geometry {
   const slot = width / SLOTS
-  const size = slot * 0.82
+  const size = slot * 0.9
   const height = size * 1.9 + 40
   return { width, slot, size, height, y: height / 2 - size * 0.62 }
 }
