@@ -11,3 +11,7 @@ coverage/
 
 .DS_Store
 Thumbs.db
+
+# Hojas de sprites originales y hojas de control de scripts/sprites.ts
+src/assets/*.png
+src/assets/units/*_control.png
