@@ -115,7 +115,7 @@ Estimación con Claude Code: 20‑32 h en total.
 - Script de simulación: miles de combates entre bots para detectar unidades o razas demasiado fuertes o débiles.
 - Ajustar valores en `docs/diseno.md` y en `units.ts` a la vez.
 - ~~Iconos o arte provisional coherente para cada unidad.~~ Hecho: sprites en `src/assets/units/` (generados con `pnpm sprites`).
-- Pendiente de arte: sprite de la Cabeza de hidra (de momento muestra su abreviatura).
+- ~~Pendiente de arte: sprite de la Cabeza de hidra.~~ Hecho: `hydraHead.webp`.
 - Coste por tier (2/3/4 de oro) y precio visible en cada carta de la tienda.
 
 **Terminado cuando**

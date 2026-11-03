@@ -8,8 +8,8 @@ describe('sprites de las unidades', () => {
     expect(missing.map((unit) => unit.id)).toEqual([])
   })
 
-  it('las fichas invocadas sin sprite se quedan sin él (se ve la abreviatura)', () => {
+  it('las fichas invocadas también tienen sprite', () => {
     expect(spriteUrl('bones')).toBeDefined()
-    expect(spriteUrl('hydraHead')).toBeUndefined()
+    expect(spriteUrl('hydraHead')).toBeDefined()
   })
 })
