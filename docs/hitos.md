@@ -132,7 +132,7 @@ Estimación con Claude Code: 20‑32 h en total.
 - Control de velocidad del combate (x1, x2) y botón para saltar.
 - Diseño adaptado a móvil en vertical.
 - Guardar la partida en curso en el navegador para continuar después.
-- Publicar la web (Netlify, Vercel o GitHub Pages).
+- Publicar la web (Netlify, Vercel o GitHub Pages). Hecho: GitHub Pages en https://jarko-pro.github.io/arena-de-razas/, se publica sola con cada push a `main` (`.github/workflows/deploy.yml`).
 
 **Terminado cuando**
 - Se juega cómodo en un móvil de 375 px de ancho.
