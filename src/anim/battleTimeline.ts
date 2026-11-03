@@ -449,7 +449,7 @@ export function buildBattleTimeline(
           tl.fromTo(
             el,
             { opacity: 0, scale: 0.6 },
-            { opacity: 1, scale: 1, duration: s(D.appear), ease: 'back.out(2)' },
+            { opacity: 1, scale: 1, duration: s(D.appear), ease: 'back.out(2)', immediateRender: false },
             time,
           )
         }
@@ -470,10 +470,12 @@ export function buildBattleTimeline(
             undefined,
             time,
           )
+          // Sin immediateRender: false, el inicio se aplicaría al crear la línea
+          // de tiempo y la unidad estaría oculta desde el principio del combate.
           tl.fromTo(
             el,
             { opacity: 0, scale: 1.4 },
-            { opacity: 1, scale: 1, duration: s(D.appear), ease: 'power2.out' },
+            { opacity: 1, scale: 1, duration: s(D.appear), ease: 'power2.out', immediateRender: false },
             time,
           )
         }
