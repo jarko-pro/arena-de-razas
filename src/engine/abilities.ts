@@ -21,6 +21,8 @@ export interface TriggerContext {
   readonly lineAtDeath?: readonly BattleUnit[]
   /** Posición que ocupaba la unidad al morir. */
   readonly indexAtDeath?: number
+  /** Posición que ocupaba el aliado que acaba de morir, para "Cuando muere un aliado". */
+  readonly allyIndexAtDeath?: number
 }
 
 /**
@@ -219,7 +221,13 @@ function planEffect(
       if (ctx.line(unit.side).length >= MAX_LINE) return null
       const stats = effect.stats === undefined ? undefined : resolveValue(effect.stats, level)
       const base = Math.max(0, ownIndex(ctx, unit, tctx))
-      const index = effect.placement === 'behind' ? base + 1 : base
+      const index =
+        effect.placement === 'behind'
+          ? base + 1
+          : effect.placement === 'deadAlly'
+            ? tctx.allyIndexAtDeath
+            : base
+      if (index === undefined) return null
       const unitId = effect.unitId
       return () => {
         ctx.summon(unit, unitId, count, index, stats)
@@ -261,8 +269,11 @@ export function fireTrigger(
 ): void {
   const ability = UNITS[unit.defId].ability
   if (!ability || ability.trigger !== trigger) return
+  if (ability.uses && unit.abilityUses >= resolveValue(ability.uses, unit.level)) return
   const plan = planEffect(ctx, unit, ability.effect, tctx)
   if (!plan) return
+  // Solo cuenta como uso si de verdad hace algo.
+  unit.abilityUses++
   ctx.ability(unit, ability.label)
   plan()
 }

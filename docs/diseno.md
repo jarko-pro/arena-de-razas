@@ -169,9 +169,9 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 | Nigromante | 2 | 1/3 | Cuando muere un aliado: +n/+n (n=1) |
 | Necrófago | 2 | 2/4 | Cuando muere cualquier unidad: +n ATK (n=1) |
 | Espectro | 3 | 4/3 | Al morir por primera vez en el combate: vuelve con n PV (n=1) |
-| Liche | 3 | 3/5 | Inicio del combate: invoca n Esqueletos 1/1 detrás de él (n=1) |
+| Liche | 3 | 3/5 | Cuando muere un aliado: invoca un Esqueleto 1/1 en su sitio, como máximo n veces por combate (n=1) |
 
-**Invocaciones**: aparecen en la posición de la unidad que las invoca (o detrás, si se indica). Si el equipo ya tiene 5 unidades, la invocación no ocurre. Las fichas invocadas no se pueden comprar ni pasan a la tienda.
+**Invocaciones**: aparecen en la posición de la unidad que las invoca (o detrás, o en el sitio del aliado que acaba de morir, si se indica). Si el equipo ya tiene 5 unidades, la invocación no ocurre. Las fichas invocadas no se pueden comprar ni pasan a la tienda.
 
 ## Rivales (versión 1)
 
@@ -181,7 +181,7 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 - Oro de los bots: en cada ronda, cada bot recibe **el mismo oro que el jugador** en esa ronda (10 base + el oro extra por racha que tuvo el jugador). Los bots no tienen racha propia.
 - En cada ronda, el rival se elige **al azar entre los 4** (25 % cada uno, con la semilla de la partida). Se puede repetir rival en rondas seguidas.
 - El rival de la ronda **no se revela en la tienda**; se conoce al entrar en combate. En la pantalla de combate se ve su nombre encima de su equipo.
-- Estrategia del bot: prioriza apilar copias de lo que ya tiene y comprar unidades de su raza preferida (las de tier más alto primero); junta unidades iguales cuando puede; si el equipo está lleno y aparece algo claramente mejor, vende la más débil; hace reroll si no encuentra nada útil; congela la tienda si deja sin comprar algo útil y la descongela en la ronda siguiente tras comprarlo. Ordena el equipo con las más resistentes delante y las de habilidad al inicio del combate detrás, salvo las que invocan (el Liche), que van delante para que sus invocaciones sirvan.
+- Estrategia del bot: prioriza apilar copias de lo que ya tiene y comprar unidades de su raza preferida (las de tier más alto primero); junta unidades iguales cuando puede; si el equipo está lleno y aparece algo claramente mejor, vende la más débil; hace reroll si no encuentra nada útil; congela la tienda si deja sin comprar algo útil y la descongela en la ronda siguiente tras comprarlo. Ordena el equipo con las más resistentes delante y las de habilidad al inicio del combate detrás, salvo las que invocan, que van delante para que sus invocaciones sirvan.
 
 ## Ideas de recompensa (pendiente de probar, no implementar todavía)
 

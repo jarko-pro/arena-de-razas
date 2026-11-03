@@ -98,7 +98,8 @@ export type Effect =
       readonly kind: 'summon'
       readonly unitId: UnitId
       readonly count: AbilityValue
-      readonly placement: 'self' | 'behind'
+      /** `deadAlly`: en el sitio del aliado que acaba de morir (con "Cuando muere un aliado"). */
+      readonly placement: 'self' | 'behind' | 'deadAlly'
       /** Si está, las estadísticas de la ficha son este valor en ATK y PV. */
       readonly stats?: AbilityValue
     }
@@ -112,6 +113,8 @@ export interface Ability {
   /** Descripción en español; `{n}` se sustituye por el valor del nivel y `{s}` por "s" si no es 1. */
   readonly text: string
   readonly effect: Effect
+  /** Veces que puede dispararse en un combate; sin límite si no está. */
+  readonly uses?: AbilityValue
 }
 
 export interface UnitDef {
@@ -523,15 +526,16 @@ export const UNITS: Record<UnitId, UnitDef> = {
     atk: 3,
     hp: 5,
     ability: {
-      trigger: 'battleStart',
+      trigger: 'onAllyDeath',
       label: 'Levantar a los muertos',
-      text: 'Inicio del combate: invoca {n} Esqueleto{s} 1/1 detrás de él.',
+      text: 'Cuando muere un aliado: invoca un Esqueleto 1/1 en su sitio (máximo {n} por combate).',
       effect: {
         kind: 'summon',
         unitId: 'skeleton',
-        count: perLevel(1),
-        placement: 'behind',
+        count: fixed(1),
+        placement: 'deadAlly',
       },
+      uses: perLevel(1),
     },
   },
 
@@ -594,7 +598,8 @@ export function abilityValue(effect: Effect): AbilityValue | undefined {
 export function abilityText(def: UnitDef, level: Level): string {
   const ability = def.ability
   if (!ability) return ''
-  const value = abilityValue(ability.effect)
+  // Con límite de usos, el valor que cambia con el nivel es ese límite.
+  const value = ability.uses ?? abilityValue(ability.effect)
   if (!value) return ability.text
   const n = resolveValue(value, level)
   return ability.text.replaceAll('{n}', String(n)).replaceAll('{s}', n === 1 ? '' : 's')

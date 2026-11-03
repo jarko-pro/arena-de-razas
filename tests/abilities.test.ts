@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { BattleEvent } from '../src/engine/combat'
 import { eventsOf, fight, firstOf, team } from './helpers'
 
 describe('orcos', () => {
@@ -101,17 +102,51 @@ describe('no muertos', () => {
     expect([summon?.unit.atk, summon?.unit.hp]).toEqual([2, 2])
   })
 
-  it('el Liche invoca Esqueletos detrás de él', () => {
+  /** Invocaciones de Esqueleto (las del Liche) en un combate. */
+  const raised = (events: readonly BattleEvent[]) =>
+    eventsOf(events, 'summon').filter((event) => event.unit.defId === 'skeleton')
+
+  it('el Liche no invoca nada al empezar el combate', () => {
     const { events } = fight(team('lich'), team('zombie'))
-    const summon = firstOf(events, 'summon')
-    expect(summon?.index).toBe(1)
-    expect(summon?.unit.defId).toBe('skeleton')
-    expect([summon?.unit.atk, summon?.unit.hp]).toEqual([1, 1])
+    expect(raised(events)).toHaveLength(0)
   })
 
-  it('el Liche de nivel 2 invoca dos Esqueletos', () => {
-    const { events } = fight(team(['lich', 2]), team('zombie'))
-    expect(eventsOf(events, 'summon')).toHaveLength(2)
+  it('el Liche levanta un Esqueleto en el sitio del aliado que muere, aunque el equipo esté lleno', () => {
+    const { events, teams } = fight(
+      team('grunt', 'zombie', 'zombie', 'zombie', 'lich'),
+      team(['saurian', 3]),
+    )
+    const firstDeath = firstOf(events, 'death')
+    expect(firstDeath?.uid).toBe(teams.A[0]?.uid)
+    const skeleton = raised(events)[0]
+    expect(skeleton?.side).toBe('A')
+    expect(skeleton?.index).toBe(0)
+    expect([skeleton?.unit.atk, skeleton?.unit.hp]).toEqual([1, 1])
+    // Justo después de la muerte: su habilidad y la invocación.
+    const at = events.indexOf(firstDeath!)
+    expect(events.slice(at, events.indexOf(skeleton!))).toContainEqual({
+      type: 'ability',
+      uid: teams.A[4]?.uid,
+      label: 'Levantar a los muertos',
+    })
+  })
+
+  it('el Liche levanta como mucho n Esqueletos por combate (n = nivel)', () => {
+    const allies = ['grunt', 'grunt', 'grunt', 'grunt'] as const
+    expect(raised(fight(team(...allies, 'lich'), team(['saurian', 3])).events)).toHaveLength(1)
+    expect(raised(fight(team(...allies, ['lich', 2]), team(['saurian', 3])).events)).toHaveLength(2)
+  })
+
+  it('si no cabe el Esqueleto, el Liche no gasta su uso', () => {
+    // La Hidra muere y sus cabezas vuelven a llenar el equipo: no hay sitio.
+    const { events } = fight(
+      team('hydra', 'zombie', 'zombie', 'zombie', 'lich'),
+      team(['saurian', 3], ['saurian', 3]),
+    )
+    const deaths = eventsOf(events, 'death')
+    const skeleton = raised(events)[0]
+    expect(skeleton).toBeDefined()
+    expect(events.indexOf(skeleton!)).toBeGreaterThan(events.indexOf(deaths[1]!))
   })
 
   it('el Espectro vuelve en su posición y solo una vez', () => {

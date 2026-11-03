@@ -116,7 +116,7 @@ describe('escalado por nivel', () => {
     expect(abilityText(UNITS.shaman, 3)).toBe('Al morir: +6/+6 al aliado de detrás.')
     expect(abilityText(UNITS.cleric, 1)).toBe('Inicio del combate: +2 PV al aliado de delante.')
     expect(abilityText(UNITS.lich, 2)).toBe(
-      'Inicio del combate: invoca 2 Esqueletos 1/1 detrás de él.',
+      'Cuando muere un aliado: invoca un Esqueleto 1/1 en su sitio (máximo 2 por combate).',
     )
     expect(abilityText(UNITS.hydra, 2)).toBe('Al morir: invoca 2 Cabezas de hidra de 4/4.')
   })

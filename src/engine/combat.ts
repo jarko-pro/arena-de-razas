@@ -48,6 +48,8 @@ export interface BattleUnit {
   alive: boolean
   hasRevived: boolean
   tookDamage: boolean
+  /** Veces que se ha disparado su habilidad en este combate. */
+  abilityUses: number
 }
 
 /** Foto de una unidad para la interfaz. */
@@ -155,6 +157,7 @@ export function simulateBattle(
       maxHp: stats.hp,
       alive: true,
       hasRevived: false,
+      abilityUses: 0,
       tookDamage: false,
     }
     units.set(unit.uid, unit)
@@ -323,7 +326,7 @@ export function simulateBattle(
           fireTrigger(ctx, unit, 'onDeath', tctx)
           for (const ally of [...lines[unit.side]]) {
             if (ally !== unit && ally.alive && ally.hp > 0) {
-              fireTrigger(ctx, ally, 'onAllyDeath')
+              fireTrigger(ctx, ally, 'onAllyDeath', { allyIndexAtDeath: indexAtDeath })
             }
           }
           for (const other of orderedUnits()) {
