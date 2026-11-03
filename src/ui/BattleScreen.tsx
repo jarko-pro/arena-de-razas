@@ -4,6 +4,7 @@ import {
   collectBattleUnits,
   resetArena,
   type ArenaDom,
+  type BattleSound,
   type BattleTimeline,
 } from '../anim/battleTimeline'
 import { measureArena, type Geometry } from '../anim/geometry'
@@ -15,6 +16,8 @@ import {
   type UnitSnapshot,
 } from '../engine/combat'
 import { UNITS, abilityText } from '../engine/units'
+import { playSound } from './sound'
+import { readStorage, writeStorage } from './storage'
 import { UnitCard } from './UnitCard'
 import './arena.css'
 
@@ -22,6 +25,14 @@ const BANNER: Record<Outcome, string> = {
   victoryA: '¡Victoria!',
   victoryB: 'Derrota',
   draw: 'Empate',
+}
+
+type Speed = 1 | 2
+
+const SPEED_KEY = 'arena-de-razas:velocidad'
+
+function savedSpeed(): Speed {
+  return readStorage(SPEED_KEY) === '2' ? 2 : 1
 }
 
 function describe(unit: UnitSnapshot): string {
@@ -62,11 +73,15 @@ export function BattleScreen({
   const elsRef = useRef(new Map<Uid, HTMLDivElement>())
   const timelineRef = useRef<BattleTimeline | null>(null)
   const playingRef = useRef(false)
+  /** Al saltar se pasa por todos los eventos de golpe: no deben sonar. */
+  const skippingRef = useRef(false)
 
   const [geo, setGeo] = useState<Geometry | null>(null)
   const [playing, setPlaying] = useState(false)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const [finished, setFinished] = useState(false)
+  const [speed, setSpeed] = useState<Speed>(savedSpeed)
+  const speedRef = useRef(speed)
 
   const getDom = useCallback((): ArenaDom | null => {
     const arena = arenaRef.current
@@ -113,7 +128,11 @@ export function BattleScreen({
     setOutcome(null)
     setPlaying(true)
     playingRef.current = true
-    const timeline = buildBattleTimeline(dom, result, geo, setOutcome)
+    const onSound = (sound: BattleSound): void => {
+      if (!skippingRef.current) playSound(sound)
+    }
+    const timeline = buildBattleTimeline(dom, result, geo, setOutcome, onSound)
+    timeline.timeScale(speedRef.current)
     timeline.eventCallback('onComplete', () => {
       setPlaying(false)
       playingRef.current = false
@@ -126,8 +145,24 @@ export function BattleScreen({
   /** Lleva el combate al final sin esperar a la animación. */
   const skip = useCallback(() => {
     if (!playingRef.current) play()
+    skippingRef.current = true
     timelineRef.current?.progress(1)
+    skippingRef.current = false
+    // Los números y etiquetas de todo el combate han salido a la vez: fuera.
+    fxRef.current?.replaceChildren()
   }, [play])
+
+  const toggleSpeed = (): void => {
+    const next: Speed = speed === 1 ? 2 : 1
+    setSpeed(next)
+    speedRef.current = next
+    writeStorage(SPEED_KEY, String(next))
+    timelineRef.current?.timeScale(next)
+  }
+
+  useEffect(() => {
+    if (outcome === 'victoryA') playSound('victory')
+  }, [outcome])
 
   // Avisa una sola vez del resultado, aunque luego se repita la animación.
   const onFinishRef = useRef(onFinish)
@@ -151,6 +186,14 @@ export function BattleScreen({
       <div className="controles">
         <button type="button" className="btn primary" onClick={play} disabled={playing}>
           {finished ? 'Repetir' : 'Combatir'}
+        </button>
+        <button
+          type="button"
+          className="btn velocidad"
+          onClick={toggleSpeed}
+          aria-label={`Velocidad x${speed}. Pulsa para cambiarla`}
+        >
+          x{speed}
         </button>
         {!finished && (
           <button type="button" className="btn" onClick={skip}>

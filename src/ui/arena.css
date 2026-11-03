@@ -337,3 +337,44 @@
   color: var(--muted);
   margin: 0;
 }
+
+.btn.velocidad {
+  min-width: 3.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- Móvil --- */
+
+@media (max-width: 600px) {
+  .pantalla-combate {
+    gap: 10px;
+    padding-block: 10px 16px;
+    padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px));
+  }
+
+  .pantalla-combate .controles .btn {
+    min-height: 44px;
+  }
+
+  .bandos {
+    font-size: 16px;
+  }
+
+  .arena {
+    border-radius: 14px;
+  }
+
+  /* Las fichas son pequeñas: los nombres ya están en las listas de abajo. */
+  .arena .nm {
+    display: none;
+  }
+
+  .tag {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+
+  .lista {
+    padding: 10px 12px;
+  }
+}

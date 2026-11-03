@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   finishRound,
   newGame,
@@ -12,12 +12,13 @@ import { EndScreen } from './EndScreen'
 import { GameHud } from './GameHud'
 import { RivalsScreen } from './RivalsScreen'
 import { RoundSummary } from './RoundSummary'
+import { loadSave, storeSave, type SavedGame } from './savedGame'
 import { ShopScreen } from './ShopScreen'
 import { StartScreen } from './StartScreen'
 
 /** Inicio → rivales → tienda → combate (con su resultado) → tienda… → final. */
 type Screen =
-  | { readonly kind: 'start' }
+  | { readonly kind: 'start'; readonly saved: SavedGame | null }
   | { readonly kind: 'rivals'; readonly game: GameState }
   | { readonly kind: 'shop'; readonly game: GameState }
   | {
@@ -38,12 +39,52 @@ function startGame(): Screen {
   return { kind: 'rivals', game: newGame(newSeed(), RACES) }
 }
 
-export function App() {
-  const [screen, setScreen] = useState<Screen>({ kind: 'start' })
+function resume(saved: SavedGame): Screen {
+  const { game } = saved
+  return saved.screen === 'battle'
+    ? { kind: 'battle', game, battle: prepareBattle(game), after: null }
+    : { kind: saved.screen, game }
+}
 
+/**
+ * Qué guardar de cada pantalla. Con el combate ya visto se guarda la partida
+ * siguiente; en la pantalla de inicio se deja el guardado como esté.
+ */
+function toSave(screen: Screen): SavedGame | null | undefined {
   switch (screen.kind) {
     case 'start':
-      return <StartScreen onPlay={() => setScreen(startGame())} />
+      return undefined
+    case 'rivals':
+    case 'shop':
+      return { screen: screen.kind, game: screen.game }
+    case 'battle': {
+      const { game, after } = screen
+      if (!after) return { screen: 'battle', game }
+      return after.status === 'playing' ? { screen: 'shop', game: after } : null
+    }
+    case 'end':
+      return null
+  }
+}
+
+export function App() {
+  const [screen, setScreen] = useState<Screen>(() => ({ kind: 'start', saved: loadSave() }))
+
+  useEffect(() => {
+    const save = toSave(screen)
+    if (save !== undefined) storeSave(save)
+  }, [screen])
+
+  switch (screen.kind) {
+    case 'start': {
+      const { saved } = screen
+      return (
+        <StartScreen
+          onPlay={() => setScreen(startGame())}
+          onContinue={saved ? () => setScreen(resume(saved)) : undefined}
+        />
+      )
+    }
 
     case 'rivals': {
       const { game } = screen

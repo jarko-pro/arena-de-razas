@@ -357,3 +357,86 @@
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* Moneda que vuela de la unidad vendida al contador de oro (anim/shopFx.ts). */
+.moneda-volando {
+  position: fixed;
+  z-index: 45;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffe7a3, var(--accent) 60%, #a8741c);
+  border: 2px solid #8a6318;
+  pointer-events: none;
+}
+
+.oro {
+  display: inline-block;
+  transform-origin: 50% 60%;
+}
+
+/* ---------------------------------------------------------------- Móvil --- */
+
+@media (max-width: 600px) {
+  .pantalla-tienda {
+    gap: 10px;
+    padding-block: 10px 16px;
+    padding-inline: max(10px, env(safe-area-inset-left, 0px)) max(10px, env(safe-area-inset-right, 0px));
+  }
+
+  .zona {
+    padding: 8px;
+    gap: 6px;
+    border-radius: 14px;
+  }
+
+  .hueco {
+    padding: 3px;
+  }
+
+  .racha {
+    font-size: 12px;
+  }
+
+  /* Los tres botones en una fila, a la altura del pulgar. */
+  .pantalla-tienda .controles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .pantalla-tienda .controles .btn {
+    min-height: 44px;
+    padding: 6px 8px;
+    font-size: 13px;
+    line-height: 1.15;
+  }
+
+  .zona-venta {
+    padding: 8px;
+    font-size: 13px;
+  }
+
+  .ayuda {
+    font-size: 13px;
+  }
+
+  .detalle {
+    min-height: 0;
+    padding: 10px 12px;
+  }
+
+  /* Con una unidad señalada, el detalle (y su botón de comprar o vender) queda pegado abajo. */
+  .detalle.con-unidad {
+    position: sticky;
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    z-index: 30;
+    border-color: var(--accent);
+    box-shadow: 0 -6px 24px rgb(0 0 0 / 55%);
+  }
+
+  .detalle-cabecera b {
+    font-size: 18px;
+  }
+}

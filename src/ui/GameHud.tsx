@@ -1,4 +1,5 @@
 import { STARTING_LIVES, WINS_TO_WIN, type GameState } from '../engine/game'
+import { MuteButton } from './MuteButton'
 
 interface GameHudProps {
   readonly game: GameState
@@ -19,6 +20,7 @@ export function GameHud({ game, round }: GameHudProps) {
       <span aria-label={`${game.wins} de ${WINS_TO_WIN} victorias`}>
         <span aria-hidden="true">🏆</span> <b>{game.wins}</b>/{WINS_TO_WIN}
       </span>
+      <MuteButton />
     </div>
   )
 }

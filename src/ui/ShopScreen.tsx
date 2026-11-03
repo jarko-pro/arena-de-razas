@@ -1,5 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { captureCards, playStack, type CardShot } from '../anim/shopFx'
+import { prefersReducedMotion } from '../anim/battleTimeline'
+import {
+  captureCards,
+  playArrive,
+  playGold,
+  playReroll,
+  playSell,
+  playStack,
+  type CardShot,
+} from '../anim/shopFx'
 import { MAX_TEAM_SIZE, teamUnitStats, type TeamUnit } from '../engine/combat'
 import type { Streak } from '../engine/game'
 import {
@@ -22,6 +31,7 @@ import {
   unitCost,
 } from '../engine/shop'
 import { RACE_NAMES, UNITS, abilityText } from '../engine/units'
+import { playSound, type SoundName } from './sound'
 import { UnitArt } from './UnitArt'
 import { artClass } from './sprites'
 import './arena.css'
@@ -53,6 +63,20 @@ interface Ghost {
   readonly x: number
   readonly y: number
   readonly over: DropTarget | null
+}
+
+/** Animación pendiente: se prepara antes del nuevo render y se reproduce después. */
+type PendingFx =
+  | { readonly kind: 'stack'; readonly shots: CardShot[]; readonly targetId: number; readonly levelUp: boolean }
+  | { readonly kind: 'buy'; readonly targetId: number; readonly from?: DOMRect }
+  | { readonly kind: 'sell'; readonly shots: CardShot[]; readonly coins: number }
+  | { readonly kind: 'reroll' }
+
+const FX_SOUND: Record<PendingFx['kind'], SoundName> = {
+  stack: 'merge',
+  buy: 'buy',
+  sell: 'sell',
+  reroll: 'reroll',
 }
 
 /** Distancia que hay que mover el puntero para que una pulsación pase a ser arrastre. */
@@ -122,6 +146,26 @@ interface CardProps {
   readonly onPointerLeave?: () => void
 }
 
+/** Oro de la tienda: al cambiar, cuenta hasta el valor nuevo. Al entrar en la tienda sube desde 0. */
+function GoldCounter({ gold }: { readonly gold: number }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const valueRef = useRef<HTMLSpanElement>(null)
+  const shownRef = useRef(0)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const value = valueRef.current
+    const from = shownRef.current
+    shownRef.current = gold
+    if (!el || !value || from === gold || prefersReducedMotion()) return
+    return playGold(el, value, from, gold)
+  }, [gold])
+  return (
+    <span className="oro" ref={ref} data-oro aria-label={`${gold} de oro`}>
+      <span ref={valueRef}>{gold}</span> <small>oro</small>
+    </span>
+  )
+}
+
 function XpPips({ unit }: { readonly unit: OwnedUnit }) {
   const progress = levelProgress(unit)
   if (!progress) {
@@ -188,24 +232,42 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
   const dragRef = useRef<Drag | null>(null)
   const lastTapRef = useRef<{ pick: Pick; time: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
-  const stackRef = useRef<{ shots: CardShot[]; targetId: number; levelUp: boolean } | null>(
-    null,
-  )
+  const fxRef = useRef<PendingFx | null>(null)
 
-  const stopStackRef = useRef(new Set<() => void>())
+  const stopFxRef = useRef(new Set<() => void>())
 
-  // Tras pintar el equipo, la copia apilada vuela hasta su unidad.
+  // Tras pintar la tienda nueva, se anima lo que acaba de pasar.
   useLayoutEffect(() => {
-    const pending = stackRef.current
+    const pending = fxRef.current
     const root = rootRef.current
     if (!pending || !root) return
-    stackRef.current = null
-    stopStackRef.current.add(playStack(root, pending.shots, pending.targetId, pending.levelUp))
+    fxRef.current = null
+    switch (pending.kind) {
+      case 'stack':
+        stopFxRef.current.add(playStack(root, pending.shots, pending.targetId, pending.levelUp))
+        break
+      case 'buy':
+        stopFxRef.current.add(playArrive(root, pending.targetId, pending.from))
+        break
+      case 'sell':
+        stopFxRef.current.add(
+          playSell(pending.shots, root.querySelector<HTMLElement>('[data-oro]'), pending.coins),
+        )
+        break
+      case 'reroll':
+        stopFxRef.current.add(
+          playReroll(
+            root,
+            state.offers.flatMap((offer) => (offer ? [offer.id] : [])),
+          ),
+        )
+        break
+    }
   }, [state])
 
   // Al ir al combate no deben quedar copias volando por la pantalla.
   useEffect(() => {
-    const stoppers = stopStackRef.current
+    const stoppers = stopFxRef.current
     return () => {
       for (const stop of stoppers) stop()
       stoppers.clear()
@@ -220,19 +282,26 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
       ? state.team.find((u) => u.id === pick.id)
       : (state.offers.find((o) => o?.id === pick.id) ?? undefined)
 
-  const apply = (result: ShopResult): void => {
+  /** Aplica una acción del motor; `fx` es la animación que le toca si sale bien. */
+  const apply = (result: ShopResult, fx?: () => PendingFx): void => {
     if (!result.ok) {
       setMessage(SHOP_ERROR_TEXT[result.error])
       return
     }
     const stack = result.events.find((event) => event.type === 'stack')
-    if (stack && rootRef.current) {
-      // La copia que desaparece se fotografía ahora, antes del nuevo render.
-      stackRef.current = {
-        shots: captureCards(rootRef.current, [stack.sourceId]),
-        targetId: stack.unitId,
-        levelUp: result.events.some((event) => event.type === 'levelUp'),
-      }
+    // Las cartas que desaparecen se fotografían ahora, antes del nuevo render.
+    const pending: PendingFx | null =
+      stack && rootRef.current
+        ? {
+            kind: 'stack',
+            shots: captureCards(rootRef.current, [stack.sourceId]),
+            targetId: stack.unitId,
+            levelUp: result.events.some((event) => event.type === 'levelUp'),
+          }
+        : (fx?.() ?? null)
+    if (pending) {
+      playSound(FX_SOUND[pending.kind])
+      fxRef.current = prefersReducedMotion() ? null : pending
     }
     const texts = result.events
       .map((event) => eventText(result.state, event))
@@ -241,19 +310,29 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
     onChange(result.state)
   }
 
-  const buyOffer = (id: number, position?: number): void => {
-    apply(buy(state, offerIndex(id), position))
+  /** `dragged`: la carta se soltó ya en su hueco, así que no vuela desde la tienda. */
+  const buyOffer = (id: number, position?: number, dragged = false): void => {
+    apply(buy(state, offerIndex(id), position), () => ({
+      kind: 'buy',
+      targetId: id,
+      from: dragged ? undefined : rootRef.current?.querySelector(`[data-unit-id="${id}"]`)?.getBoundingClientRect(),
+    }))
     setSelected(null)
   }
 
   const sellUnit = (id: number): void => {
-    apply(sell(state, teamIndex(id)))
+    const unit = state.team.find((u) => u.id === id)
+    apply(sell(state, teamIndex(id)), () => ({
+      kind: 'sell',
+      shots: rootRef.current ? captureCards(rootRef.current, [id]) : [],
+      coins: unit?.level ?? 1,
+    }))
     setSelected(null)
   }
 
   const drop = (pick: Pick, target: DropTarget): void => {
     if (pick.kind === 'offer') {
-      if (target.kind === 'team') buyOffer(pick.id, target.index)
+      if (target.kind === 'team') buyOffer(pick.id, target.index, true)
       return
     }
     if (target.kind === 'sell') {
@@ -359,9 +438,7 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
         <h1>Tienda</h1>
         <div className="indicadores">
           <span>Tier {tierForRound(state.round)}</span>
-          <span className="oro" aria-label={`${state.gold} de oro`}>
-            {state.gold} <small>oro</small>
-          </span>
+          <GoldCounter gold={state.gold} />
         </div>
       </header>
 
@@ -397,7 +474,7 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
         <button
           type="button"
           className="btn"
-          onClick={() => apply(reroll(state))}
+          onClick={() => apply(reroll(state), () => ({ kind: 'reroll' }))}
           disabled={state.frozen || state.gold < REROLL_COST}
           title={state.frozen ? 'Descongela la tienda para hacer reroll' : undefined}
         >
@@ -467,7 +544,7 @@ export function ShopScreen({ state, streak, onChange, onFight }: ShopScreenProps
         {message ?? ' '}
       </p>
 
-      <section className="detalle">
+      <section className={shown && shownUnit ? 'detalle con-unidad' : 'detalle'}>
         {shown && shownUnit ? (
           <Detail
             unit={shownUnit}

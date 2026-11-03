@@ -13,6 +13,9 @@ export interface ArenaDom {
 
 export type BattleTimeline = gsap.core.Timeline
 
+/** Sonidos que pide la línea de tiempo; la UI decide cómo suenan. */
+export type BattleSound = 'hit' | 'death'
+
 /** Duraciones base, tomadas de docs/demo.html. */
 const D = {
   lunge: 0.62,
@@ -108,6 +111,7 @@ export function buildBattleTimeline(
   result: BattleResult,
   geo: Geometry,
   onEnd: (outcome: Outcome) => void,
+  onSound: (sound: BattleSound) => void = () => {},
 ): gsap.core.Timeline {
   const reduced = prefersReducedMotion()
   const s = (seconds: number): number => (reduced ? 0 : seconds)
@@ -146,6 +150,10 @@ export function buildBattleTimeline(
       undefined,
       at,
     )
+  }
+
+  const sound = (name: BattleSound, at: number): void => {
+    tl.call(() => onSound(name), undefined, at)
   }
 
   const popBadge = (uid: Uid, which: 'atk' | 'hp', at: number): void => {
@@ -313,7 +321,10 @@ export function buildBattleTimeline(
         const impacts = takeWhile('damage')
         const impactAt = time + s(D.impact)
         for (const hit of impacts) damage(hit.uid, hit.amount, hit.hp, impactAt)
-        if (impacts.length > 0) arenaShake(impactAt)
+        if (impacts.length > 0) {
+          arenaShake(impactAt)
+          sound('hit', impactAt)
+        }
         time += s(D.lunge) + s(D.beat)
         break
       }
@@ -324,13 +335,17 @@ export function buildBattleTimeline(
         time += s(D.shot)
         const hits = takeWhile('damage')
         for (const hit of hits) damage(hit.uid, hit.amount, hit.hp, time)
-        if (hits.length > 0) time += s(D.shake) + s(D.beat)
+        if (hits.length > 0) {
+          sound('hit', time)
+          time += s(D.shake) + s(D.beat)
+        }
         break
       }
 
       case 'damage': {
         const hits = takeWhile('damage')
         for (const hit of hits) damage(hit.uid, hit.amount, hit.hp, time)
+        sound('hit', time)
         time += s(D.shake) + s(D.beat)
         break
       }
@@ -391,6 +406,7 @@ export function buildBattleTimeline(
 
       case 'death': {
         const deaths = takeWhile('death')
+        sound('death', time)
         for (const dead of deaths) {
           const el = dom.unitEl(dead.uid)
           if (!el) continue
