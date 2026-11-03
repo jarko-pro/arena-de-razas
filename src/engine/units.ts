@@ -528,10 +528,10 @@ export const UNITS: Record<UnitId, UnitDef> = {
     ability: {
       trigger: 'onAllyDeath',
       label: 'Levantar a los muertos',
-      text: 'Cuando muere un aliado: invoca un Esqueleto 1/1 en su sitio (máximo {n} por combate).',
+      text: 'Cuando muere un aliado: invoca unos Huesos 1/1 en su sitio (máximo {n} por combate).',
       effect: {
         kind: 'summon',
-        unitId: 'skeleton',
+        unitId: 'bones',
         count: fixed(1),
         placement: 'deadAlly',
       },

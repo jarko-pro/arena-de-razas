@@ -169,7 +169,7 @@ Las unidades invocadas (fichas) también escalan: un Esqueleto de nivel 2 invoca
 | Nigromante | 2 | 1/3 | Cuando muere un aliado: +n/+n (n=1) |
 | Necrófago | 2 | 2/4 | Cuando muere cualquier unidad: +n ATK (n=1) |
 | Espectro | 3 | 4/3 | Al morir por primera vez en el combate: vuelve con n PV (n=1) |
-| Liche | 3 | 3/5 | Cuando muere un aliado: invoca un Esqueleto 1/1 en su sitio, como máximo n veces por combate (n=1) |
+| Liche | 3 | 3/5 | Cuando muere un aliado: invoca unos Huesos 1/1 en su sitio, como máximo n veces por combate (n=1) |
 
 **Invocaciones**: aparecen en la posición de la unidad que las invoca (o detrás, o en el sitio del aliado que acaba de morir, si se indica). Si el equipo ya tiene 5 unidades, la invocación no ocurre. Las fichas invocadas no se pueden comprar ni pasan a la tienda.
 

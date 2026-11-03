@@ -102,16 +102,16 @@ describe('no muertos', () => {
     expect([summon?.unit.atk, summon?.unit.hp]).toEqual([2, 2])
   })
 
-  /** Invocaciones de Esqueleto (las del Liche) en un combate. */
+  /** Invocaciones de Huesos (las del Liche) en un combate. */
   const raised = (events: readonly BattleEvent[]) =>
-    eventsOf(events, 'summon').filter((event) => event.unit.defId === 'skeleton')
+    eventsOf(events, 'summon').filter((event) => event.unit.defId === 'bones')
 
   it('el Liche no invoca nada al empezar el combate', () => {
     const { events } = fight(team('lich'), team('zombie'))
     expect(raised(events)).toHaveLength(0)
   })
 
-  it('el Liche levanta un Esqueleto en el sitio del aliado que muere, aunque el equipo esté lleno', () => {
+  it('el Liche levanta unos Huesos en el sitio del aliado que muere, aunque el equipo esté lleno', () => {
     const { events, teams } = fight(
       team('grunt', 'zombie', 'zombie', 'zombie', 'lich'),
       team(['saurian', 3]),
@@ -131,13 +131,21 @@ describe('no muertos', () => {
     })
   })
 
-  it('el Liche levanta como mucho n Esqueletos por combate (n = nivel)', () => {
+  it('el Liche levanta como mucho n Huesos por combate (n = nivel)', () => {
     const allies = ['grunt', 'grunt', 'grunt', 'grunt'] as const
     expect(raised(fight(team(...allies, 'lich'), team(['saurian', 3])).events)).toHaveLength(1)
     expect(raised(fight(team(...allies, ['lich', 2]), team(['saurian', 3])).events)).toHaveLength(2)
   })
 
-  it('si no cabe el Esqueleto, el Liche no gasta su uso', () => {
+  it('los Huesos del Liche no invocan nada al morir', () => {
+    const { events } = fight(team('grunt', 'lich'), team(['saurian', 3]))
+    const bones = raised(events)[0]
+    expect(bones).toBeDefined()
+    expect(eventsOf(events, 'summon')).toHaveLength(1)
+    expect(eventsOf(events, 'death').map((event) => event.uid)).toContain(bones?.unit.uid)
+  })
+
+  it('si no caben los Huesos, el Liche no gasta su uso', () => {
     // La Hidra muere y sus cabezas vuelven a llenar el equipo: no hay sitio.
     const { events } = fight(
       team('hydra', 'zombie', 'zombie', 'zombie', 'lich'),

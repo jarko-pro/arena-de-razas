@@ -28,7 +28,7 @@ const DESIGN_TEXT: Record<Exclude<UnitId, 'bones' | 'hydraHead'>, string> = {
   necromancer: 'Cuando muere un aliado: +1/+1.',
   ghoul: 'Cuando muere cualquier unidad: +1 ATK.',
   spectre: 'Al morir por primera vez en el combate: vuelve con 1 PV.',
-  lich: 'Cuando muere un aliado: invoca un Esqueleto 1/1 en su sitio (máximo 1 por combate).',
+  lich: 'Cuando muere un aliado: invoca unos Huesos 1/1 en su sitio (máximo 1 por combate).',
 }
 
 describe('las 24 unidades según diseno.md', () => {
@@ -42,7 +42,7 @@ describe('las 24 unidades según diseno.md', () => {
     expect(abilityText(UNITS.warWolf, 2)).toBe('Al morir: +2 ATK a todos los orcos aliados.')
     expect(abilityText(UNITS.berserker, 3)).toBe('Al recibir daño: +6 ATK.')
     expect(abilityText(UNITS.lich, 3)).toBe(
-      'Cuando muere un aliado: invoca un Esqueleto 1/1 en su sitio (máximo 3 por combate).',
+      'Cuando muere un aliado: invoca unos Huesos 1/1 en su sitio (máximo 3 por combate).',
     )
   })
 
